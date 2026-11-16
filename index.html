@@ -19,6 +19,46 @@
     code, pre, .font-mono {
       font-family: 'JetBrains Mono', monospace;
     }
+
+    /* Smooth fade-in for tab content */
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(8px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+    .tab-panel { animation: fadeIn 0.25s ease-out both; }
+
+    /* Pulsing dot for active step */
+    @keyframes pulse-ring {
+      0%   { box-shadow: 0 0 0 0 rgba(56,189,248,0.4); }
+      70%  { box-shadow: 0 0 0 6px rgba(56,189,248,0); }
+      100% { box-shadow: 0 0 0 0 rgba(56,189,248,0); }
+    }
+    .active-step-pulse { animation: pulse-ring 2s infinite; }
+
+    /* Smooth scroll for the JSON inspector */
+    .json-scroll { scroll-behavior: smooth; }
+
+    /* Better focus rings for accessibility */
+    button:focus-visible {
+      outline: 2px solid #38bdf8;
+      outline-offset: 2px;
+    }
+
+    /* Smooth tab transitions */
+    .tab-btn { transition: background 0.15s ease, color 0.15s ease, box-shadow 0.15s ease; }
+
+    /* Tooltip-style hover on JSON keys */
+    .json-key-row:hover { background: rgba(148,163,184,0.06); }
+
+    /* Progress bar animation */
+    .progress-bar { transition: width 0.4s cubic-bezier(0.4,0,0.2,1); }
+
+    /* Step number badge */
+    .step-badge-active { animation: pulse-ring 2s infinite; }
+
+    /* Card hover lift */
+    .card-hover { transition: transform 0.15s ease, box-shadow 0.15s ease; }
+    .card-hover:hover { transform: translateY(-1px); box-shadow: 0 8px 25px -8px rgba(56,189,248,0.15); }
   </style>
 </head>
 <body class="bg-slate-950 text-slate-100 min-h-screen">
@@ -861,7 +901,14 @@
         if (LAB_STEPS[currentStepIndex].highlightKeys.length > 0) {
           setSelectedJsonKey(LAB_STEPS[currentStepIndex].highlightKeys[0]);
         }
+        // Scroll to top of page on step change
+        window.scrollTo({ top: 0, behavior: "smooth" });
       }, [currentStepIndex]);
+
+      // Scroll to top on tab change
+      useEffect(() => {
+        window.scrollTo({ top: 0, behavior: "smooth" });
+      }, [activeTab]);
 
       const goToStep = (idx) => setCurrentStepIndex(idx);
       const handleNext = () => {
@@ -874,6 +921,23 @@
           setCurrentStepIndex((prev) => prev - 1);
         }
       };
+
+      // Keyboard navigation: left/right arrows for lab steps, 1-4 for tabs
+      useEffect(() => {
+        const handler = (e) => {
+          if (e.target.tagName === "INPUT" || e.target.tagName === "TEXTAREA") return;
+          if (activeTab === "walkthrough") {
+            if (e.key === "ArrowRight") handleNext();
+            if (e.key === "ArrowLeft") handlePrev();
+          }
+          if (e.key === "1") setActiveTab("walkthrough");
+          if (e.key === "2") setActiveTab("videos");
+          if (e.key === "3") setActiveTab("simulator");
+          if (e.key === "4") setActiveTab("tokens");
+        };
+        window.addEventListener("keydown", handler);
+        return () => window.removeEventListener("keydown", handler);
+      }, [activeTab, currentStepIndex]);
 
       const displayedScopes = useMemo(() => {
         const baseList = showAllScopesInJson
@@ -934,7 +998,7 @@
             <div className="max-w-7xl mx-auto px-4 py-3 flex flex-col gap-3">
               <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
                 <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-sky-500 to-indigo-600 flex items-center justify-center shadow-lg shadow-sky-500/20">
+                  <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-sky-500 to-indigo-600 flex items-center justify-center shadow-lg shadow-sky-500/30 ring-1 ring-sky-400/30">
                     <ShieldCheck className="w-6 h-6 text-white" />
                   </div>
                   <div>
@@ -953,6 +1017,7 @@
                     </div>
                     <p className="text-xs text-slate-400">
                       Discovery JSON Walkthrough • Authorization & Scope Concepts • Live OAuth 2.0, PKCE & Token Simulator
+                      <span className="ml-2 hidden sm:inline text-slate-600">• Press 1–4 to switch tabs, ←→ to navigate steps</span>
                     </p>
                   </div>
                 </div>
@@ -961,7 +1026,7 @@
                 <div className="flex flex-wrap items-center bg-slate-950 p-1 rounded-xl border border-slate-800 self-start md:self-auto gap-1">
                   <button
                     onClick={() => setActiveTab("walkthrough")}
-                    className={`px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-all ${
+                    className={`tab-btn px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 ${
                       activeTab === "walkthrough"
                         ? "bg-sky-500 text-slate-950 shadow-md shadow-sky-500/20"
                         : "text-slate-400 hover:text-white"
@@ -972,7 +1037,7 @@
                   </button>
                   <button
                     onClick={() => setActiveTab("videos")}
-                    className={`px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-all ${
+                    className={`tab-btn px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 ${
                       activeTab === "videos"
                         ? "bg-indigo-500 text-white shadow-md shadow-indigo-500/20"
                         : "text-slate-400 hover:text-white"
@@ -983,7 +1048,7 @@
                   </button>
                   <button
                     onClick={() => setActiveTab("simulator")}
-                    className={`px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-all ${
+                    className={`tab-btn px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 ${
                       activeTab === "simulator"
                         ? "bg-emerald-500 text-slate-950 shadow-md shadow-emerald-500/20"
                         : "text-slate-400 hover:text-white"
@@ -994,7 +1059,7 @@
                   </button>
                   <button
                     onClick={() => setActiveTab("tokens")}
-                    className={`px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-all ${
+                    className={`tab-btn px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 ${
                       activeTab === "tokens"
                         ? "bg-amber-400 text-slate-950 shadow-md shadow-amber-400/20"
                         : "text-slate-400 hover:text-white"
@@ -1022,7 +1087,7 @@
                           title={step.title}
                           className={`px-2.5 py-1 rounded-lg text-xs font-semibold transition-all flex items-center gap-1 shrink-0 ${
                             isCurrent
-                              ? "bg-sky-500 text-slate-950 shadow-md shadow-sky-500/25 scale-105"
+                              ? "active-step-pulse bg-sky-500 text-slate-950 shadow-md shadow-sky-500/25 scale-105"
                               : isDone
                               ? "bg-slate-800 text-sky-400 hover:bg-slate-700 border border-slate-700"
                               : "bg-slate-900 text-slate-500 hover:bg-slate-800 border border-slate-800"
@@ -1040,7 +1105,7 @@
 
             <div className="w-full h-1 bg-slate-900">
               <div
-                className="h-full bg-gradient-to-r from-sky-400 via-indigo-500 to-emerald-400 transition-all duration-300"
+                className="progress-bar h-full bg-gradient-to-r from-sky-400 via-indigo-500 to-emerald-400"
                 style={{
                   width:
                     activeTab === "walkthrough"
@@ -1057,7 +1122,7 @@
 
           {/* TAB 1: 10-STEP GUIDED LAB */}
           {activeTab === "walkthrough" && (
-            <main className="max-w-7xl w-full mx-auto flex-1 grid grid-cols-1 lg:grid-cols-12 gap-6 p-4 sm:p-6">
+            <main className="tab-panel max-w-7xl w-full mx-auto flex-1 grid grid-cols-1 lg:grid-cols-12 gap-6 p-4 sm:p-6">
               <section className="lg:col-span-7 flex flex-col justify-between bg-slate-900/70 border border-slate-800 rounded-2xl p-5 sm:p-6 shadow-xl">
                 <div className="space-y-6">
                   <div className="border-b border-slate-800 pb-4">
@@ -1780,12 +1845,15 @@
                     disabled={currentStepIndex === LAB_STEPS.length - 1}
                     className={`px-4 py-2 rounded-xl text-xs font-bold flex items-center gap-1.5 transition ${
                       currentStepIndex === LAB_STEPS.length - 1
-                        ? "bg-slate-900 text-slate-600 cursor-not-allowed"
+                        ? "bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 cursor-default"
                         : "bg-sky-500 hover:bg-sky-400 text-slate-950 shadow-lg shadow-sky-500/20"
                     }`}
                   >
-                    <span>Next Step</span>
-                    <ArrowRight className="w-4 h-4" />
+                    {currentStepIndex === LAB_STEPS.length - 1 ? (
+                      <><CheckCircle2 className="w-4 h-4" /><span>Lab Complete!</span></>
+                    ) : (
+                      <><span>Next Step</span><ArrowRight className="w-4 h-4" /></>
+                    )}
                   </button>
                 </div>
               </section>
@@ -1844,7 +1912,7 @@
                   )}
                 </div>
 
-                <div className="p-4 font-mono text-xs overflow-y-auto max-h-[540px] flex-1 bg-slate-950/40">
+                <div className="json-scroll p-4 font-mono text-xs overflow-y-auto max-h-[540px] flex-1 bg-slate-950/40">
                   {!isPrettyPrint ? (
                     <div className="break-all text-slate-400 leading-relaxed select-all">
                       {JSON.stringify(SMART_CONFIG)}
@@ -1940,7 +2008,7 @@
 
           {/* TAB 2: CORE CONCEPTS & VIDEO HUB */}
           {activeTab === "videos" && (
-            <main className="max-w-7xl w-full mx-auto flex-1 flex flex-col gap-6 p-4 sm:p-6">
+            <main className="tab-panel max-w-7xl w-full mx-auto flex-1 flex flex-col gap-6 p-4 sm:p-6">
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
                 {CONCEPT_VIDEOS.map((vid) => {
                   const isSelected = selectedVideoId === vid.id;
@@ -1951,7 +2019,7 @@
                       className={`p-4 rounded-2xl border text-left transition-all flex flex-col justify-between gap-2 ${
                         isSelected
                           ? "bg-indigo-500/15 border-indigo-400 text-white shadow-lg shadow-indigo-500/10"
-                          : "bg-slate-900/70 border-slate-800 text-slate-400 hover:bg-slate-900 hover:text-slate-200"
+                          : "card-hover bg-slate-900/70 border-slate-800 text-slate-400 hover:bg-slate-900 hover:text-slate-200"
                       }`}
                     >
                       <div className="flex items-center justify-between w-full">
@@ -2389,7 +2457,7 @@
 
           {/* TAB 3: OAUTH 2.0 & PKCE HTTP SIMULATOR */}
           {activeTab === "simulator" && (
-            <main className="max-w-7xl w-full mx-auto flex-1 flex flex-col gap-5 p-4 sm:p-6">
+            <main className="tab-panel max-w-7xl w-full mx-auto flex-1 flex flex-col gap-5 p-4 sm:p-6">
               <div className="bg-slate-900/80 border border-slate-800 rounded-2xl p-4 sm:p-5 shadow-xl space-y-4">
                 <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 pb-4 border-b border-slate-800">
                   <div>
@@ -3853,7 +3921,7 @@
 
           {/* TAB 4: TOKEN DEEP-DIVE LAB */}
           {activeTab === "tokens" && (
-            <main className="max-w-7xl w-full mx-auto flex-1 flex flex-col gap-6 p-4 sm:p-6">
+            <main className="tab-panel max-w-7xl w-full mx-auto flex-1 flex flex-col gap-6 p-4 sm:p-6">
               <div className="bg-slate-900/80 border border-slate-800 rounded-2xl p-5 sm:p-6 shadow-xl space-y-5">
                 <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-slate-800 pb-4">
                   <div>
