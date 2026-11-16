@@ -1084,120 +1084,99 @@
       }
     ];
 
-    // GLOSSARY DATA (27 TERMS)
+    // GLOSSARY DATA — comprehensive, categorized, alphabetical
     const GLOSSARY_TERMS = [
-      {
-        term: "access_token",
-        category: "Tokens",
-        def: "An opaque string or signed JWT issued by the authorization server. Presented to the FHIR Resource Server via the 'Authorization: Bearer <token>' header to gain access to patient data within granted scopes."
-      },
-      {
-        term: "aud",
-        category: "OAuth Parameters & Claims",
-        def: "Audience. In authorization requests, specifies the target FHIR Base URL (aud=https://api.health.org/fhir). In JWT tokens, specifies who is intended to process the token."
-      },
-      {
-        term: "authorize-post",
-        category: "SMART Capabilities",
-        def: "A capability indicating the authorization server supports receiving authorization parameters via HTTP POST instead of GET query strings, preventing URL length limits."
-      },
-      {
-        term: "Bearer",
-        category: "HTTP Authentication",
-        def: "An HTTP Authorization scheme (RFC 6750) meaning 'give access to the bearer (carrier) of this token'. Must always be protected with TLS/HTTPS."
-      },
-      {
-        term: "CapabilityStatement",
-        category: "FHIR Metadata",
-        def: "A clinical metadata resource located at /metadata describing the server's FHIR version, supported clinical resources (e.g. Observation, Condition), search parameters, and profiles."
-      },
-      {
-        term: "client_credentials",
-        category: "OAuth Grant Types",
-        def: "A server-to-server OAuth 2.0 grant type where a trusted backend service authenticates directly with private keys to query FHIR data without a human user signing in."
-      },
-      {
-        term: "EHR Launch",
-        category: "Launch Workflows",
-        def: "A launch workflow starting inside an electronic health record (e.g. Epic Hyperspace or Cerner PowerChart). The EHR passes 'iss' and an opaque 'launch' token to the app."
-      },
-      {
-        term: "exp",
-        category: "JWT Claims",
-        def: "Expiration Time. A Unix timestamp (seconds since 1970-01-01) specifying the exact instant after which a token must no longer be accepted by any server."
-      },
-      {
-        term: "fhirUser",
-        category: "OpenID Connect",
-        def: "A SMART on FHIR identity claim in the id_token containing a relative URL to the FHIR resource representing the signed-in person (e.g. 'Practitioner/123' or 'RelatedPerson/45')."
-      },
-      {
-        term: "iat",
-        category: "JWT Claims",
-        def: "Issued At. A Unix timestamp specifying the moment the authorization server minted the JWT."
-      },
-      {
-        term: "id_token",
-        category: "Tokens",
-        def: "A signed JSON Web Token (JWT) provided by OpenID Connect containing assertions about user identity. Intended only for the client app UI—never sent to the FHIR API!"
-      },
-      {
-        term: "introspection",
-        category: "Endpoints",
-        def: "An OAuth 2.0 endpoint (/smart/introspect) allowing a resource server to verify whether an opaque token is still active, valid, and what scopes it carries."
-      },
-      {
-        term: "iss",
-        category: "OAuth Parameters & Claims",
-        def: "Issuer URL. Identifies the SMART authorization server that issued the credentials, and passed to apps during launch to discover /.well-known/smart-configuration."
-      },
-      {
-        term: "JWKS",
-        category: "Cryptography",
-        def: "JSON Web Key Set. A public JSON endpoint (advertised as jwks_uri) publishing the public cryptographic keys apps use to verify digital signatures on id_tokens."
-      },
-      {
-        term: "JWT",
-        category: "Cryptography",
-        def: "JSON Web Token (RFC 7519). A compact, URL-safe container composed of Base64Url-encoded Header, Payload, and Signature separated by dots."
-      },
-      {
-        term: "launch context",
-        category: "SMART Context",
-        def: "Information bound to the authorization session and returned in the token response (such as 'patient' ID, 'encounter' ID, or 'need_patient_banner')."
-      },
-      {
-        term: "need_patient_banner",
-        category: "SMART Context",
-        def: "A boolean returned in the token response telling the app whether to display its own patient demographic header (true) or suppress it because the EHR already shows one (false)."
-      },
-      {
-        term: "offline_access",
-        category: "Scopes",
-        def: "An OAuth scope string. When approved, grants the app a long-lived 'refresh_token' to obtain fresh access_tokens when the current one expires."
-      },
-      {
-        term: "OpenID Connect",
-        category: "Protocol",
-        def: "An identity layer built on top of OAuth 2.0 that provides authentication verification via the id_token and standardized userinfo claims."
-      },
-      {
-        term: "PKCE",
-        category: "Security",
-        def: "Proof Key for Code Exchange (RFC 7636). A security mechanism that uses a secret verifier and SHA-256 challenge to prevent authorization code theft on public clients."
-      },
-      {
-        term: "refresh_token",
-        category: "Tokens",
-        def: "A long-lived credential used at the token_endpoint (grant_type=refresh_token) to obtain a new access_token when the current one expires without prompting the user."
-      },
-      {
-        term: "revocation",
-        category: "Endpoints",
-        def: "An endpoint (/smart/revoke) allowing an app to explicitly invalidate an access or refresh token when a user logs out."
-      },
-      {
-        term: "S256",
+      // ── Acronyms & Abbreviations ──────────────────────────────────────────
+      { term: "API", category: "Acronyms", def: "Application Programming Interface. A defined contract for software components to communicate. FHIR resources are exposed over RESTful APIs using standard HTTP verbs (GET, POST, PUT, DELETE)." },
+      { term: "EHR", category: "Acronyms", def: "Electronic Health Record. A digital system used by clinical staff (e.g. Epic, Oracle Health/Cerner, Meditech) that stores patient demographics, encounters, lab results, medications, and clinical notes." },
+      { term: "FHIR", category: "Acronyms", def: "Fast Healthcare Interoperability Resources (HL7 FHIR). A standard for exchanging healthcare information electronically using RESTful APIs and JSON/XML resources." },
+      { term: "HL7", category: "Acronyms", def: "Health Level Seven International. The standards development organization that publishes the FHIR specification and other healthcare interoperability standards." },
+      { term: "HTTP", category: "Acronyms", def: "Hypertext Transfer Protocol. The foundation of data communication for the web. FHIR APIs and OAuth 2.0 flows run over HTTP (and HTTPS with TLS encryption)." },
+      { term: "JWT", category: "Acronyms", def: "JSON Web Token (RFC 7519). A compact, URL-safe token format consisting of three Base64Url-encoded sections — Header, Payload (claims), and Signature — separated by dots. Used for id_tokens and sometimes access_tokens." },
+      { term: "JWKS", category: "Acronyms", def: "JSON Web Key Set. A publicly accessible JSON document (at the jwks_uri endpoint) publishing the cryptographic public keys that apps use to verify JWT signatures." },
+      { term: "LOINC", category: "Acronyms", def: "Logical Observation Identifiers Names and Codes. A standard coding system for clinical observations. For example, LOINC 4548-4 = HbA1c. Used inside FHIR Observation resources to identify what was measured." },
+      { term: "MRN", category: "Acronyms", def: "Medical Record Number. A health system's internal patient identifier. Different from a FHIR Patient resource ID, though often mapped to it." },
+      { term: "OIDC", category: "Acronyms", def: "OpenID Connect. An identity authentication layer built on top of OAuth 2.0, adding the id_token and standardized user identity claims like sub, fhirUser, and name." },
+      { term: "PHI", category: "Acronyms", def: "Protected Health Information. Any individually identifiable health information protected under HIPAA. Real EHR servers require SMART on FHIR authorization before returning PHI." },
+      { term: "PKCE", category: "Acronyms", def: "Proof Key for Code Exchange (RFC 7636). A security extension to OAuth 2.0 that prevents authorization code interception attacks by requiring a code_verifier secret paired with a code_challenge hash." },
+      { term: "REST", category: "Acronyms", def: "Representational State Transfer. An architectural style for web APIs. FHIR uses RESTful conventions: resources have URLs, HTTP verbs describe actions, and responses are JSON or XML." },
+      { term: "RFC", category: "Acronyms", def: "Request for Comments. Documents published by the IETF (Internet Engineering Task Force) defining internet standards. OAuth 2.0 = RFC 6749, PKCE = RFC 7636, JWT = RFC 7519, Bearer tokens = RFC 6750." },
+      { term: "SMART", category: "Acronyms", def: "Substitutable Medical Apps, Reusable Technologies. A set of open standards (built on OAuth 2.0 + FHIR) enabling apps to securely connect to any SMART-compatible EHR with a consistent authorization pattern." },
+      { term: "SSO", category: "Acronyms", def: "Single Sign-On. During EHR Launch, the clinician already authenticated to the EHR, so the authorization server can establish the SMART session without prompting for a separate login. Advertised via the sso-openid-connect capability." },
+      { term: "TLS", category: "Acronyms", def: "Transport Layer Security. The encryption protocol (formerly SSL) that secures HTTP traffic as HTTPS. All OAuth flows, token endpoints, and FHIR API calls must use HTTPS/TLS to protect tokens in transit." },
+      { term: "TTL", category: "Acronyms", def: "Time To Live. The duration (in seconds) an access_token remains valid, specified in the token response as 'expires_in'. Typically 3600 seconds (1 hour) for SMART tokens." },
+      { term: "URL", category: "Acronyms", def: "Uniform Resource Locator. A web address. In SMART on FHIR, URLs are used for FHIR base URLs, OAuth endpoints (authorization_endpoint, token_endpoint), redirect_uris, and JWKS endpoints." },
+      // ── Tokens ────────────────────────────────────────────────────────────
+      { term: "access_token", category: "Tokens", def: "An opaque string or signed JWT issued by the authorization server. Presented to the FHIR Resource Server via the 'Authorization: Bearer <token>' header to gain access to patient data within granted scopes. Never send to the id_token's intended audience." },
+      { term: "id_token", category: "Tokens", def: "A signed JWT provided by OpenID Connect. Contains assertions about user identity (sub, fhirUser, name). Intended only for the client app UI — never send to the FHIR API as a Bearer token!" },
+      { term: "refresh_token", category: "Tokens", def: "A long-lived credential issued with offline_access scope. Sent to the token_endpoint (grant_type=refresh_token) to obtain a new access_token when the current one expires, without prompting the user to log in again." },
+      { term: "Bearer", category: "Tokens", def: "An HTTP Authorization scheme (RFC 6750). The header 'Authorization: Bearer <access_token>' tells the FHIR server to grant access to 'whoever bears (carries) this token'. Always requires HTTPS." },
+      { term: "opaque token", category: "Tokens", def: "An access_token that is a random, server-side reference string (e.g. 'st_live_99a8b7c6...') with no readable payload. The FHIR server must call the introspection_endpoint to validate it. Contrast with JWT." },
+      // ── OAuth Parameters & Claims ──────────────────────────────────────────
+      { term: "aud", category: "OAuth / Claims", def: "Audience. In authorization requests, the aud parameter specifies the target FHIR server URL the access_token should be scoped to. In JWT payloads, the aud claim identifies which system(s) should accept this token." },
+      { term: "code_challenge", category: "OAuth / Claims", def: "The hashed, public half of the PKCE pair. Computed as BASE64URL(SHA256(code_verifier)) and sent with the authorization request. Safe to transmit in the URL because SHA-256 is a one-way function." },
+      { term: "code_verifier", category: "OAuth / Claims", def: "The secret, random string (43–128 chars) generated by the app before the authorization request. Kept in app memory and sent to the token_endpoint. The server hashes it to verify it matches the earlier code_challenge." },
+      { term: "grant_type", category: "OAuth / Claims", def: "Specifies which OAuth 2.0 workflow is being used in a token request. SMART supports: authorization_code (user-facing flows), refresh_token (renewal), and client_credentials (backend services)." },
+      { term: "iss", category: "OAuth / Claims", def: "Issuer URL. Identifies the SMART authorization server. Passed to apps during EHR Launch (as ?iss=) to tell them where to find the /.well-known/smart-configuration document." },
+      { term: "nonce", category: "OAuth / Claims", def: "A unique, random value included in the authorization request and echoed in the id_token. Prevents replay attacks where an attacker tries to reuse a captured id_token." },
+      { term: "redirect_uri", category: "OAuth / Claims", def: "The URL the authorization server redirects the browser to after the user approves access, delivering the authorization code. Must be pre-registered with the EHR and match exactly." },
+      { term: "response_type", category: "OAuth / Claims", def: "Specifies what the authorization server should return. SMART uses response_type=code (the authorization code flow) — the server redirects with a temporary code that the app exchanges at the token_endpoint." },
+      { term: "scope", category: "OAuth / Claims", def: "A space-delimited string of permissions requested by the app (e.g. 'patient/Observation.rs launch/patient openid offline_access'). The server may grant fewer scopes than requested." },
+      { term: "state", category: "OAuth / Claims", def: "A cryptographically random value generated per request and sent in the authorization redirect. The app verifies the returned state matches exactly to prevent Cross-Site Request Forgery (CSRF) attacks." },
+      // ── JWT Claims ─────────────────────────────────────────────────────────
+      { term: "exp", category: "JWT Claims", def: "Expiration Time. Unix timestamp (seconds since 1970-01-01T00:00:00Z) after which the token must be rejected. Typically iat + 3600 for SMART access_tokens." },
+      { term: "iat", category: "JWT Claims", def: "Issued At. Unix timestamp when the authorization server created the JWT. Used to calculate token age and validate that it was recently issued." },
+      { term: "kid", category: "JWT Claims", def: "Key ID. A hint in the JWT header identifying which key in the JWKS was used to sign this token. Apps look up the matching key in the jwks_uri response to verify the signature." },
+      { term: "sub", category: "JWT Claims", def: "Subject. A stable, unique identifier for the authenticated user or entity within the issuer's identity namespace. Never contains PHI." },
+      // ── Scopes ─────────────────────────────────────────────────────────────
+      { term: "fhirUser", category: "Scopes & Identity", def: "When requested alongside openid, the authorization server includes a fhirUser claim in the id_token pointing to the signed-in user's FHIR resource (e.g. 'Practitioner/dr-smith-101')." },
+      { term: "launch", category: "Scopes & Identity", def: "An EHR Launch scope. Tells the authorization server that the app was launched from inside the EHR and that the launch= context token should be used to bind the authorization to the active patient/encounter." },
+      { term: "launch/patient", category: "Scopes & Identity", def: "A Standalone Launch scope. Requests that the authorization server prompt the user to select a patient from the portal, returning the chosen patient ID in the token response as the 'patient' context value." },
+      { term: "offline_access", category: "Scopes & Identity", def: "When granted, the token response includes a refresh_token enabling the app to silently renew access_tokens without user interaction after they expire. Essential for long-running clinical apps." },
+      { term: "openid", category: "Scopes & Identity", def: "Requesting this scope triggers OpenID Connect, causing the authorization server to include an id_token in the token response with identity claims about the signed-in user." },
+      { term: "patient/*.rs", category: "Scopes & Identity", def: "A wildcard scope granting read (r) and search (s) access to ALL FHIR resource types for the patient in context. Easier for prototyping but discouraged in production — prefer specific resource scopes." },
+      { term: "system/*.rs", category: "Scopes & Identity", def: "A system-level wildcard scope used in client_credentials (backend service) flows. Grants read/search access to ALL patients' records of ALL resource types — extremely powerful, requires careful governance." },
+      // ── Endpoints ──────────────────────────────────────────────────────────
+      { term: "authorization_endpoint", category: "Endpoints", def: "The front-channel URL where the app redirects the user's browser for sign-in and consent. Found in /.well-known/smart-configuration. The browser's address bar is visible during this step." },
+      { term: "introspection_endpoint", category: "Endpoints", def: "A back-channel URL (/smart/introspect) that resource servers use to validate opaque access_tokens — checking whether a token is active, its scopes, and its expiry time." },
+      { term: "revocation_endpoint", category: "Endpoints", def: "A back-channel URL (/smart/revoke) that apps call to explicitly invalidate an access_token or refresh_token, typically when a user logs out of the app." },
+      { term: "token_endpoint", category: "Endpoints", def: "The back-channel URL where the app POSTs to exchange an authorization code (+ PKCE verifier) for tokens, or to use a refresh_token for renewal. Never visible in the browser address bar." },
+      // ── SMART Capabilities ─────────────────────────────────────────────────
+      { term: "authorize-post", category: "SMART Capabilities", def: "Capability flag indicating the authorization server accepts authorization parameters as an HTTP POST body instead of query string GET params, avoiding URL length limits." },
+      { term: "client-confidential-asymmetric", category: "SMART Capabilities", def: "Capability indicating the server supports backend confidential clients authenticating at the token_endpoint using a signed private_key_jwt (asymmetric cryptography — no shared secret required)." },
+      { term: "client-confidential-symmetric", category: "SMART Capabilities", def: "Capability indicating the server supports confidential clients using a shared client_secret to authenticate at the token_endpoint (client_secret_basic or client_secret_post)." },
+      { term: "client-public", category: "SMART Capabilities", def: "Capability indicating the server supports public clients (e.g. browser or mobile apps that cannot securely store a client_secret), authenticating via PKCE only (token_endpoint_auth_method=none)." },
+      { term: "context-banner", category: "SMART Capabilities", def: "Capability indicating the server can return 'need_patient_banner' and 'smart_style_url' context in the token response to help embedded apps display (or hide) the patient demographic header." },
+      { term: "launch-ehr", category: "SMART Capabilities", def: "Capability indicating the server supports the EHR Launch workflow, where the EHR initiates the app launch by passing ?iss= and ?launch= parameters to the app's launch URL." },
+      { term: "launch-standalone", category: "SMART Capabilities", def: "Capability indicating the server supports Standalone Launch, where the app starts independently (outside the EHR) and uses launch/patient to establish patient context." },
+      { term: "permission-v1", category: "SMART Capabilities", def: "Capability indicating support for SMART v1 scope syntax: patient/Observation.read (read-only) and patient/Observation.write (write-only). Coarser than v2." },
+      { term: "permission-v2", category: "SMART Capabilities", def: "Capability indicating support for SMART v2 granular scope syntax: patient/Observation.cruds where each letter grants a specific operation (c=create, r=read, u=update, d=delete, s=search)." },
+      { term: "sso-openid-connect", category: "SMART Capabilities", def: "Capability indicating the server supports OpenID Connect Single Sign-On, enabling EHR Launch flows to skip re-authentication if the clinician is already signed in to the EHR session." },
+      // ── Security ───────────────────────────────────────────────────────────
+      { term: "code_challenge_method", category: "Security", def: "Specifies the hashing algorithm for PKCE. SMART v2 requires 'S256' (SHA-256). The deprecated 'plain' method (sending the raw verifier as the challenge) is not acceptable for production." },
+      { term: "CSRF", category: "Security", def: "Cross-Site Request Forgery. An attack where a malicious site tricks an authenticated user's browser into making unwanted requests. The OAuth 'state' parameter prevents CSRF in authorization flows." },
+      { term: "refresh token rotation", category: "Security", def: "A security pattern where the server issues a new refresh_token with every refresh grant and immediately revokes the old one. If a stolen token is used by an attacker, the legitimate app's next refresh fails, detecting the breach." },
+      { term: "S256", category: "Security", def: "The PKCE code_challenge_method value meaning BASE64URL(SHA256(code_verifier)). SHA-256 is a one-way cryptographic hash — the server can verify the challenge without ever learning the original verifier." },
+      { term: "XSS", category: "Security", def: "Cross-Site Scripting. An attack injecting malicious JavaScript into a web app. Storing tokens in localStorage makes them vulnerable to XSS; session-scoped memory or sessionStorage is safer." },
+      // ── SMART Context & Discovery ──────────────────────────────────────────
+      { term: "/.well-known/smart-configuration", category: "Discovery", def: "The standard URL path appended to the FHIR base URL that returns the SMART Discovery document — a JSON object listing all OAuth endpoints, capabilities, and supported scopes for that server." },
+      { term: "CapabilityStatement", category: "Discovery", def: "A clinical metadata document at /metadata describing the FHIR server's supported resources, profiles, and search parameters. Separate from SMART Discovery — covers WHAT clinical data is available, not HOW to authorize." },
+      { term: "launch context", category: "Discovery", def: "Session-specific values returned in the token response after authorization. Includes 'patient' (FHIR Patient ID), optionally 'encounter', 'need_patient_banner', and 'smart_style_url'." },
+      { term: "need_patient_banner", category: "Discovery", def: "Token response boolean. true = standalone app must render its own patient header (name, DOB, MRN). false = EHR already shows the patient banner in its frame; app should not duplicate it." },
+      { term: "smart_style_url", category: "Discovery", def: "Token response URL pointing to a JSON object with EHR-specific CSS color variables. Allows an embedded SMART app to visually match the surrounding EHR's theme (fonts, colors, button styles)." },
+      // ── FHIR Resources ─────────────────────────────────────────────────────
+      { term: "Bundle", category: "FHIR Resources", def: "A FHIR container resource grouping multiple resources together. FHIR search results are returned as a Bundle of type 'searchset' with an array of 'entry' objects." },
+      { term: "Encounter", category: "FHIR Resources", def: "A FHIR resource representing a clinical interaction (e.g. an ED visit, outpatient appointment). Returned as 'encounter' context in EHR Launch token responses when an active encounter exists." },
+      { term: "Observation", category: "FHIR Resources", def: "A FHIR resource for a clinical measurement or finding. Lab results (HbA1c, CBC), vital signs (blood pressure, weight), and social history are all represented as Observation resources." },
+      { term: "Patient", category: "FHIR Resources", def: "A FHIR resource representing a person receiving healthcare. The Patient.id is returned as the 'patient' context value in the token response after SMART authorization." },
+      { term: "Practitioner", category: "FHIR Resources", def: "A FHIR resource representing a clinical professional (doctor, nurse, pharmacist). When a clinician launches an app via EHR Launch, the id_token's fhirUser claim often references a Practitioner resource." },
+      { term: "RelatedPerson", category: "FHIR Resources", def: "A FHIR resource representing a person related to a patient (caregiver, family member). When a caregiver accesses their family member's records, the id_token's fhirUser claim references a RelatedPerson." },
+      // ── Launch Workflows ───────────────────────────────────────────────────
+      { term: "authorization_code flow", category: "Launch Workflows", def: "The main OAuth 2.0 flow for user-facing SMART apps. App redirects browser to authorization_endpoint → user logs in → server redirects back with a one-time 'code' → app exchanges code at token_endpoint for tokens." },
+      { term: "EHR Launch", category: "Launch Workflows", def: "Launch workflow initiated from inside the EHR. The EHR opens the app's launch URL with ?iss= (FHIR base) and ?launch= (opaque context token). Patient/encounter context is established without additional user selection." },
+      { term: "Standalone Launch", category: "Launch Workflows", def: "Launch workflow where the app starts independently on a device or browser outside the EHR. The app requests launch/patient scope, causing the authorization server to present a patient-picker to the user." },
+      { term: "backend service", category: "Launch Workflows", def: "A server-to-server SMART workflow using client_credentials grant. No browser, no user sign-in. The backend app authenticates with a signed JWT (private_key_jwt) and receives a system-scoped access_token for bulk queries." },
+    ];
         category: "Cryptography",
         def: "The required PKCE code_challenge_method in SMART v2, denoting BASE64URL(SHA256(code_verifier))."
       },
@@ -1656,6 +1635,7 @@
       const [wildcardMode, setWildcardMode] = useState(false);
       const [glossaryOpen, setGlossaryOpen] = useState(false);
       const [glossarySearch, setGlossarySearch] = useState("");
+      const [glossaryCategory, setGlossaryCategory] = useState("All");
       const [quizActive, setQuizActive] = useState(false);
       const [quizQuestion, setQuizQuestion] = useState(0);
       const [quizAnswers, setQuizAnswers] = useState([]);
@@ -1876,13 +1856,21 @@
         URL.revokeObjectURL(url);
       };
 
+      const GLOSSARY_CATEGORIES = ["All", ...Array.from(new Set(GLOSSARY_TERMS.map(t => t.category))).sort()];
+
       const filteredGlossary = useMemo(() => {
-        if (!glossarySearch.trim()) return GLOSSARY_TERMS;
-        const q = glossarySearch.toLowerCase();
-        return GLOSSARY_TERMS.filter(
-          (t) => t.term.toLowerCase().includes(q) || t.def.toLowerCase().includes(q) || t.category.toLowerCase().includes(q)
-        );
-      }, [glossarySearch]);
+        let list = GLOSSARY_TERMS;
+        if (glossaryCategory !== "All") {
+          list = list.filter(t => t.category === glossaryCategory);
+        }
+        if (glossarySearch.trim()) {
+          const q = glossarySearch.toLowerCase();
+          list = list.filter(
+            (t) => t.term.toLowerCase().includes(q) || t.def.toLowerCase().includes(q) || t.category.toLowerCase().includes(q)
+          );
+        }
+        return list;
+      }, [glossarySearch, glossaryCategory]);
 
       return (
         <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col font-sans">
@@ -6266,12 +6254,12 @@ const userResourceUrl = payload.fhirUser;
           <button
             onClick={() => setGlossaryOpen(true)}
             className="fixed bottom-6 right-6 z-40 px-4 py-2.5 rounded-full bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs shadow-2xl shadow-indigo-600/40 border border-indigo-400/40 flex items-center gap-2 transition transform hover:scale-105"
-            title="Open SMART on FHIR Technical Glossary (27 Terms)"
+            title="Open SMART on FHIR Technical Glossary (79 Terms)"
           >
             <BookMarked className="w-4 h-4" />
             <span>Glossary</span>
             <span className="w-5 h-5 rounded-full bg-white/20 flex items-center justify-center text-[10px] font-mono">
-              27
+              79
             </span>
           </button>
 
@@ -6294,7 +6282,7 @@ const userResourceUrl = payload.fhirUser;
                           SMART on FHIR Technical Glossary
                         </h3>
                         <p className="text-[11px] text-slate-400">
-                          27 key protocol terms, claims, endpoints & grant workflows
+                          79 terms — acronyms · scopes · claims · endpoints · workflows
                         </p>
                       </div>
                     </div>
@@ -6326,13 +6314,30 @@ const userResourceUrl = payload.fhirUser;
                       </button>
                     )}
                   </div>
+
+                  {/* Category Filter Pills */}
+                  <div className="flex flex-wrap gap-1.5 pt-1">
+                    {GLOSSARY_CATEGORIES.map(cat => (
+                      <button
+                        key={cat}
+                        onClick={() => setGlossaryCategory(cat)}
+                        className={`px-2.5 py-1 rounded-lg text-[11px] font-semibold border transition ${
+                          glossaryCategory === cat
+                            ? "bg-indigo-500 text-white border-indigo-400"
+                            : "bg-slate-900 text-slate-400 border-slate-800 hover:border-slate-600 hover:text-slate-200"
+                        }`}
+                      >
+                        {cat === "All" ? `All (${GLOSSARY_TERMS.length})` : cat}
+                      </button>
+                    ))}
+                  </div>
                 </div>
 
                 {/* Glossary Terms List */}
                 <div className="p-4 overflow-y-auto space-y-2.5 flex-1 bg-slate-950/40">
                   {filteredGlossary.length === 0 ? (
                     <div className="text-center py-8 text-slate-500 text-xs">
-                      No glossary terms match "{glossarySearch}".
+                      No terms match “{glossarySearch}”{glossaryCategory !== "All" ? ` in category "${glossaryCategory}"` : ""}.
                     </div>
                   ) : (
                     filteredGlossary.map((item) => (
@@ -6358,7 +6363,7 @@ const userResourceUrl = payload.fhirUser;
 
                 {/* Glossary Footer */}
                 <div className="p-3 border-t border-slate-800 bg-slate-950 flex items-center justify-between text-[11px] text-slate-500">
-                  <span>Showing {filteredGlossary.length} of {GLOSSARY_TERMS.length} terms</span>
+                  <span>Showing {filteredGlossary.length} of {GLOSSARY_TERMS.length} terms{glossaryCategory !== "All" ? ` in "${glossaryCategory}"` : ""}</span>
                   <span>Press <kbd className="px-1.5 py-0.5 rounded bg-slate-800 text-slate-300 font-mono">ESC</kbd> to exit</span>
                 </div>
               </div>
