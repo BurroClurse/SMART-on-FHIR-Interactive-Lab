@@ -8,20 +8,29 @@ An open-source, self-contained interactive learning workbench for mastering **SM
 
 ## What's Inside
 
-### 1. 10-Step Guided Discovery & Scopes Lab
-* Interactive walkthrough paired with a live, searchable `/.well-known/smart-configuration` JSON inspector (`642` advertised scopes across `patient/`, `user/`, and `system/`).
-* Interactive SMART v2 scope anatomy decoder (`patient/Observation.rs` vs. `patient/Observation.cruds`) and caregiver proxy scenarios.
+The lab is organized as a suggested path for people new to SMART on FHIR. Every section keeps the full technical detail.
 
-### 2. Core Concepts & Video Hub
-* Visual sandboxes comparing open public FHIR servers (HAPI) vs. protected PHI servers, scope narrowing rules, token roles, and Epic / Oracle Health launch flowcharts.
+### 1. Start Here
+* Plain-language orientation: John, his mother Eleanor, and who is involved in a SMART connection.
+* How to read the lab: dark boxes are code, tinted text is an exact value, dotted words open the glossary.
+* Four core concepts, each with a video, a summary, and a hands-on demo.
 
-### 3. Interactive OAuth 2.0, PKCE & Refresh Token Simulator
+### 2. Guided Lab
+* Ten steps beside a live, searchable `/.well-known/smart-configuration` JSON inspector (`642` advertised scopes across `patient/`, `user/`, and `system/`).
+* SMART v2 scope anatomy (`patient/Observation.rs` vs. `patient/Observation.cruds`), caregiver scenarios, a check after each step, and a 10-question final assessment.
+
+### 3. Watch the Flow
 * **6-Actor, 19-Step Sequence Diagram** (modeled after Epic's Standalone & EHR Launch architecture).
-* **Standalone Launch (`launch-standalone`) vs. EHR Launch (`launch-ehr`)** toggle showing how `launch` context tokens, `encounter`, `need_patient_banner`, and `fhirUser` change on the wire.
-* **PKCE (`S256`) Tamper Tester** and **Access Token Expiration + Refresh Token Renewal (`offline_access`)** simulator.
+* **Standalone Launch (`launch-standalone`) vs. EHR Launch (`launch-ehr`)** toggle, **PKCE (`S256`) Tamper Tester**, and **Access Token Expiration + Refresh Token Renewal (`offline_access`)**.
+* A build-it-yourself authorization URL builder.
 
-### 4. Token Deep-Dive Lab (`id_token` vs. `access_token` vs. Context)
-* Side-by-side comparison matrix, 3-part JWT decoder (`Header.Payload.Signature`), and interactive security boundary checks.
+### 4. Tokens (`id_token` vs. `access_token` vs. Context)
+* Side-by-side comparison, the `fhirUser` claim, and a visual of `need_patient_banner`.
+
+### 5. Go Deeper
+* Collapsed reference sections: vendor sandbox comparison (Epic, Oracle Health, mock server), wildcard vs. specific scopes, seven developer anti-patterns, a DevTools debugging guide, backend services (`client_credentials`), and seven error scenarios with fixes.
+
+A searchable 79-term glossary opens from any page.
 
 ---
 
