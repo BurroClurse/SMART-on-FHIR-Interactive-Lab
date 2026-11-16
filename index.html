@@ -5,6 +5,17 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>SMART on FHIR Interactive Lab</title>
   <meta name="description" content="A hands-on lab for SMART on FHIR discovery, scopes, OAuth 2.0 with PKCE, and tokens." />
+  <link rel="canonical" href="https://burroclurse.github.io/SMART-on-FHIR-Interactive-Discovery-OAuth-2.0-Lab/" />
+  <meta property="og:type" content="website" />
+  <meta property="og:site_name" content="SMART on FHIR Interactive Lab" />
+  <meta property="og:title" content="SMART on FHIR Interactive Lab" />
+  <meta property="og:description" content="A hands-on lab for SMART on FHIR discovery, scopes, OAuth 2.0 with PKCE, and tokens. Ten guided steps, a full sign-in simulator, and a 79-term glossary." />
+  <meta property="og:url" content="https://burroclurse.github.io/SMART-on-FHIR-Interactive-Discovery-OAuth-2.0-Lab/" />
+  <meta property="og:image" content="https://burroclurse.github.io/SMART-on-FHIR-Interactive-Discovery-OAuth-2.0-Lab/og-image.png" />
+  <meta property="og:image:width" content="1200" />
+  <meta property="og:image:height" content="630" />
+  <meta property="og:image:alt" content="SMART on FHIR Interactive Lab: how a health app finds a server, asks permission, and gets its tokens" />
+  <meta name="twitter:card" content="summary_large_image" />
   <link rel="preconnect" href="https://fonts.googleapis.com" data-lab-head />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin data-lab-head />
   <link href="https://fonts.googleapis.com/css2?family=Source+Sans+3:ital,wght@0,400;0,500;0,600;0,700;1,400&family=Source+Serif+4:opsz,wght@8..60,500;8..60,600;8..60,700&family=Source+Code+Pro:wght@400;500;600;700&display=swap" rel="stylesheet" data-lab-head />
@@ -170,7 +181,7 @@
   <div id="root"></div>
 
   <script type="text/babel">
-    const { useState, useMemo, useEffect, useContext } = React;
+    const { useState, useMemo, useEffect, useContext, useRef } = React;
 
     // Self-contained SVG Icon Factory (zero external icon script dependencies)
     const makeIcon = (paths) => ({ className = "w-4 h-4" }) => (
@@ -1674,29 +1685,59 @@
       { id: "deeper", label: "Go Deeper" }
     ];
 
+    // Progress is saved in this browser only, so a refresh or a return visit
+    // picks up where the learner left off. Storage can be unavailable (private
+    // windows, blocked site data); the lab then simply starts fresh.
+    const STORAGE_PREFIX = "smart-lab:";
+    const usePersistentState = (key, initial, isValid) => {
+      const [value, setValue] = useState(() => {
+        try {
+          const raw = window.localStorage.getItem(STORAGE_PREFIX + key);
+          if (raw === null) return initial;
+          const parsed = JSON.parse(raw);
+          return !isValid || isValid(parsed) ? parsed : initial;
+        } catch (e) {
+          return initial;
+        }
+      });
+      useEffect(() => {
+        try {
+          window.localStorage.setItem(STORAGE_PREFIX + key, JSON.stringify(value));
+        } catch (e) {}
+      }, [key, value]);
+      return [value, setValue];
+    };
+    const clearSavedProgress = () => {
+      try {
+        Object.keys(window.localStorage)
+          .filter((k) => k.startsWith(STORAGE_PREFIX))
+          .forEach((k) => window.localStorage.removeItem(k));
+      } catch (e) {}
+    };
+
     function App() {
       // TAB SELECTION: initial activeTab is "concepts" (learning progression: simple -> complex)
-      const [activeTab, setActiveTab] = useState("concepts");
-      const [selectedVideoId, setSelectedVideoId] = useState(1);
+      const [activeTab, setActiveTab] = usePersistentState("tab", "concepts", (v) => TABS.some((t) => t.id === v));
+      const [selectedVideoId, setSelectedVideoId] = usePersistentState("video", 1, (v) => CONCEPT_VIDEOS.some((c) => c.id === v));
       const [selectedFlowchartType, setSelectedFlowchartType] = useState("standalone");
       const [sandboxComparisonMode, setSandboxComparisonMode] = useState("hapi");
 
       // LAB STEPS (Tab 4 Capstone)
-      const [currentStepIndex, setCurrentStepIndex] = useState(0);
-      const [completedSteps, setCompletedSteps] = useState([]);
+      const [currentStepIndex, setCurrentStepIndex] = usePersistentState("step", 0, (v) => Number.isInteger(v) && v >= 0 && v < LAB_STEPS.length);
+      const [completedSteps, setCompletedSteps] = usePersistentState("done", [], Array.isArray);
       const [isPrettyPrint, setIsPrettyPrint] = useState(true);
       const [jsonSearch, setJsonSearch] = useState("");
       const [selectedJsonKey, setSelectedJsonKey] = useState("authorization_endpoint");
       const [showAllScopesInJson, setShowAllScopesInJson] = useState(false);
 
       const [appendedWellKnown, setAppendedWellKnown] = useState(false);
-      const [step3QuizAnswer, setStep3QuizAnswer] = useState(null);
+      const [step3QuizAnswer, setStep3QuizAnswer] = usePersistentState("check3", null);
       const [pkceStage, setPkceStage] = useState("challenge");
       const [activeGrantTab, setActiveGrantTab] = useState("authorization_code");
-      const [step5QuizAnswer, setStep5QuizAnswer] = useState(null);
+      const [step5QuizAnswer, setStep5QuizAnswer] = usePersistentState("check5", null);
       const [activeScopePiece, setActiveScopePiece] = useState("context");
-      const [step8QuizAnswer, setStep8QuizAnswer] = useState(null);
-      const [caregiverAnswers, setCaregiverAnswers] = useState({
+      const [step8QuizAnswer, setStep8QuizAnswer] = usePersistentState("check8", null);
+      const [caregiverAnswers, setCaregiverAnswers] = usePersistentState("caregiver", {
         userRole: null,
         patientRole: null
       });
@@ -1761,10 +1802,10 @@
       const [glossaryOpen, setGlossaryOpen] = useState(false);
       const [glossarySearch, setGlossarySearch] = useState("");
       const [glossaryCategory, setGlossaryCategory] = useState("All");
-      const [quizActive, setQuizActive] = useState(false);
-      const [quizQuestion, setQuizQuestion] = useState(0);
-      const [quizAnswers, setQuizAnswers] = useState([]);
-      const [quizSelectedAnswer, setQuizSelectedAnswer] = useState(null);
+      const [quizActive, setQuizActive] = usePersistentState("quizOn", false);
+      const [quizQuestion, setQuizQuestion] = usePersistentState("quizQ", 0, (v) => Number.isInteger(v) && v >= 0 && v < QUIZ_QUESTIONS.length);
+      const [quizAnswers, setQuizAnswers] = usePersistentState("quizA", [], Array.isArray);
+      const [quizSelectedAnswer, setQuizSelectedAnswer] = usePersistentState("quizSel", null);
       const [fhirUserLaunchMode, setFhirUserLaunchMode] = useState("standalone");
       const [capabilityExpanded, setCapabilityExpanded] = useState(null);
 
@@ -1993,10 +2034,38 @@
         URL.revokeObjectURL(url);
       };
 
+      const glossaryOpenerRef = useRef(null);
+      const openGlossary = () => {
+        glossaryOpenerRef.current = document.activeElement;
+        setGlossaryOpen(true);
+      };
       const openTerm = (term) => {
         setGlossaryCategory("All");
         setGlossarySearch(term);
-        setGlossaryOpen(true);
+        openGlossary();
+      };
+      useEffect(() => {
+        if (!glossaryOpen && glossaryOpenerRef.current) {
+          glossaryOpenerRef.current.focus();
+          glossaryOpenerRef.current = null;
+        }
+      }, [glossaryOpen]);
+      // While the glossary is open, Tab and Shift+Tab cycle inside it.
+      const keepFocusInGlossary = (e) => {
+        if (e.key !== "Tab") return;
+        const items = Array.from(
+          e.currentTarget.querySelectorAll('button, input, select, a[href], [tabindex]:not([tabindex="-1"])')
+        ).filter((el) => !el.disabled);
+        if (!items.length) return;
+        const first = items[0];
+        const last = items[items.length - 1];
+        if (e.shiftKey && document.activeElement === first) {
+          e.preventDefault();
+          last.focus();
+        } else if (!e.shiftKey && document.activeElement === last) {
+          e.preventDefault();
+          first.focus();
+        }
       };
 
       const GLOSSARY_CATEGORIES = ["All", ...Array.from(new Set(GLOSSARY_TERMS.map(t => t.category))).sort()];
@@ -2043,7 +2112,7 @@
                 </div>
                 <button
                   type="button"
-                  onClick={() => setGlossaryOpen(true)}
+                  onClick={openGlossary}
                   aria-haspopup="dialog"
                   className="inline-flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-semibold bg-slate-900 hover:bg-slate-800 text-slate-200 border border-slate-700 transition shrink-0"
                 >
@@ -6617,6 +6686,19 @@ Content-Type: application/json
                 <span>Download this lab as one HTML file</span>
               </button>
             </div>
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 pb-6 text-sm text-slate-400">
+              Your progress is saved in this browser.{" "}
+              <button
+                type="button"
+                onClick={() => {
+                  clearSavedProgress();
+                  window.location.reload();
+                }}
+                className="underline underline-offset-2 hover:text-white"
+              >
+                Start over
+              </button>
+            </div>
           </footer>
 
           {/* GLOSSARY SIDE DRAWER */}
@@ -6627,6 +6709,7 @@ Content-Type: application/json
                 role="dialog"
                 aria-modal="true"
                 aria-labelledby="glossary-title"
+                onKeyDown={keepFocusInGlossary}
                 className="glossary-drawer relative h-full w-full sm:w-[460px] bg-slate-950 border-l border-slate-700 flex flex-col shadow-sm"
               >
                 <div className="p-4 border-b border-slate-700 bg-slate-900 space-y-3">
