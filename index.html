@@ -1177,35 +1177,6 @@
       { term: "Standalone Launch", category: "Launch Workflows", def: "Launch workflow where the app starts independently on a device or browser outside the EHR. The app requests launch/patient scope, causing the authorization server to present a patient-picker to the user." },
       { term: "backend service", category: "Launch Workflows", def: "A server-to-server SMART workflow using client_credentials grant. No browser, no user sign-in. The backend app authenticates with a signed JWT (private_key_jwt) and receives a system-scoped access_token for bulk queries." },
     ];
-        category: "Cryptography",
-        def: "The required PKCE code_challenge_method in SMART v2, denoting BASE64URL(SHA256(code_verifier))."
-      },
-      {
-        term: "scope",
-        category: "OAuth Parameters & Claims",
-        def: "A space-delimited string of permissions requested or granted (e.g. 'patient/Observation.rs launch/patient openid')."
-      },
-      {
-        term: "SMART configuration",
-        category: "Discovery",
-        def: "The JSON document located at /.well-known/smart-configuration that advertises OAuth 2.0 endpoints, capabilities, and supported scopes."
-      },
-      {
-        term: "smart_style_url",
-        category: "SMART Context",
-        def: "A URL in the token response pointing to JSON stylesheet properties for styling an embedded app to visually match the surrounding EHR."
-      },
-      {
-        term: "Standalone Launch",
-        category: "Launch Workflows",
-        def: "A launch workflow where the app begins outside of the EHR and uses launch/patient to acquire patient context through the health system's patient portal."
-      },
-      {
-        term: "sub",
-        category: "JWT Claims",
-        def: "Subject. The unique, stable identifier for the authenticated user or entity within the issuer's identity system."
-      }
-    ];
 
     // FINAL ASSESSMENT QUIZ (10 QUESTIONS)
     const QUIZ_QUESTIONS = [
