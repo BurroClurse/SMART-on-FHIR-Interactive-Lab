@@ -523,15 +523,15 @@
     const PKCE_PAIRS = [
       {
         verifier: "dBjftJeZ4CVP-mB92K27uhbUJU1p1r_wW1gFWFOEjXk",
-        challenge: "E9Melhoa2OwvFrGMTJguCHaoeK1t8URWbuGJSstw-cM"
+        challenge: "E9Melhoa2OwvFrEMTJguCHaoeK1t8URWbuGJSstw-cM"
       },
       {
         verifier: "v8Q9mKp2Lx7_nR4tY6wZ1cB3vN5mK8jH2gF4dS6aP0q",
-        challenge: "7nX9pL2mK4jR8vT1wY6zB3cN5mQ8hG2fD4sA6pP0qW8"
+        challenge: "c4odWM1dJWrt0gcs0RdagV3UYFCtGlPr8PtIvJsIJuM"
       },
       {
         verifier: "k3M9pL7xR2vN8qW4tY1zB6cF5hG0jD4sA2pQ9wE7rT5",
-        challenge: "X4mK9pL2vR7nW8qT1yZ6bC5fG0hJ4dS2aP9qE7wR5tY"
+        challenge: "UpicMd3MK0amlfMbtkGi5GH7M1HfV_J4VAJQRiiLX7c"
       }
     ];
 
@@ -794,9 +794,9 @@
           to: 5,
           viaProxy: false,
           bidirectional: true,
-          label: "17. [Renewal] Verify refresh_token & rotate token pair in DB",
+          label: "17. [Renewal] Verify refresh_token (this server also rotates it)",
           detail:
-            "Auth Server & Operational DB verify the refresh token hasn't been revoked, invalidate the old token, and issue Generation #2 tokens."
+            "Auth Server & Operational DB verify the refresh token hasn't been revoked. This server rotates refresh tokens, so it invalidates the old one and issues Generation #2. SMART lets each server decide whether to rotate."
         },
         {
           num: 18,
@@ -804,7 +804,7 @@
           from: 4,
           to: 1,
           viaProxy: false,
-          label: "18. [Renewal] Return fresh access_token (3600s) + rotated refresh_token",
+          label: "18. [Renewal] Return fresh access_token (3600s) + new refresh_token",
           detail:
             "App seamlessly replaces its expired `access_token` with the new one and resumes FHIR API calls!"
         }
@@ -829,18 +829,29 @@
         "permission-v2",
         "permission-offline",
         "authorize-post",
-        "sso-openid-connect"
+        "sso-openid-connect",
+        "client-confidential-asymmetric"
       ],
+      // Copied from each sandbox's live /.well-known/smart-configuration on 16 Nov 2026.
       oracle: [
+        "authorize-post",
         "launch-ehr",
         "launch-standalone",
         "client-public",
+        "client-confidential-asymmetric",
         "client-confidential-symmetric",
+        "sso-openid-connect",
+        "context-banner",
+        "context-style",
         "context-ehr-patient",
-        "context-standalone-patient",
+        "context-ehr-encounter",
         "permission-patient",
         "permission-user",
-        "permission-offline"
+        "permission-offline",
+        "permission-online",
+        "permission-v1",
+        "permission-v2",
+        "health-cards"
       ],
       mock: SMART_CONFIG.capabilities
     };
@@ -870,7 +881,7 @@
       "client-confidential-symmetric": {
         name: "Confidential Symmetric",
         category: "Client Authentication",
-        desc: "Supports backend server apps using a shared client_secret (client_secret_basic or client_secret_post).",
+        desc: "Supports confidential user-facing apps (for example a server-side web app) that authenticate with a shared client_secret. SMART backend services cannot use this; they must use asymmetric keys.",
         epic: true,
         oracle: true
       },
@@ -879,7 +890,7 @@
         category: "Client Authentication",
         desc: "Supports backend server apps authenticating via private_key_jwt with signed RSA/ECDSA assertions (RFC 7523).",
         epic: true,
-        oracle: false
+        oracle: true
       },
       "context-ehr-patient": {
         name: "EHR Patient Context",
@@ -893,28 +904,28 @@
         category: "Context",
         desc: "Supplies current encounter ID (e.g. ED triage, inpatient admission) in token response during EHR launch.",
         epic: true,
-        oracle: false
+        oracle: true
       },
       "context-standalone-patient": {
         name: "Standalone Patient Context",
         category: "Context",
         desc: "Prompts the user to select a patient record during standalone portal sign-in and binds it to the token.",
         epic: true,
-        oracle: true
+        oracle: false
       },
       "context-banner": {
         name: "Context Banner (need_patient_banner)",
         category: "Context",
         desc: "Returns boolean 'need_patient_banner' advising client app whether to render its own patient demographic header.",
         epic: true,
-        oracle: false
+        oracle: true
       },
       "context-style": {
         name: "Context Style (smart_style_url)",
         category: "Context",
         desc: "Supplies URL to styling configuration JSON matching the host EHR's color palette, typography, and theme.",
         epic: true,
-        oracle: false
+        oracle: true
       },
       "permission-patient": {
         name: "Patient-Level Scopes",
@@ -935,14 +946,14 @@
         category: "Permissions",
         desc: "Supports legacy SMART v1 syntax (e.g. 'patient/Observation.read' and 'patient/*.read').",
         epic: true,
-        oracle: false
+        oracle: true
       },
       "permission-v2": {
         name: "SMART v2 Granular Scopes",
         category: "Permissions",
         desc: "Supports SMART v2 granular action letters (e.g. '.rs' for read/search, '.cruds' for full lifecycle).",
         epic: true,
-        oracle: false
+        oracle: true
       },
       "permission-offline": {
         name: "Offline Access (Refresh Tokens)",
@@ -956,14 +967,28 @@
         category: "Protocol",
         desc: "Allows the client to send the authorization request parameters in an HTTP POST body instead of URL query string.",
         epic: true,
-        oracle: false
+        oracle: true
       },
       "sso-openid-connect": {
-        name: "OpenID Connect SSO",
+        name: "OpenID Connect",
         category: "Identity",
-        desc: "Supports standard OpenID Connect Core 1.0 id_token minting and userinfo claims during token exchange.",
+        desc: "The server can issue an OpenID Connect id_token (when the app asks for openid and fhirUser) that identifies the signed-in user. Whether a login screen is skipped is up to the EHR.",
         epic: true,
-        oracle: false
+        oracle: true
+      },
+      "permission-online": {
+        name: "Online Access (Refresh Tokens)",
+        category: "Permissions",
+        desc: "Supports the 'online_access' scope: a refresh token that keeps working only while the user is still signed in to the EHR.",
+        epic: false,
+        oracle: true
+      },
+      "health-cards": {
+        name: "SMART Health Cards",
+        category: "Protocol",
+        desc: "Supports issuing SMART Health Cards: signed, verifiable records such as immunizations, outside the launch flow this lab teaches.",
+        epic: false,
+        oracle: true
       }
     };
 
@@ -983,21 +1008,21 @@
         id: 2,
         mistake: "Storing tokens in localStorage",
         severity: "HIGH",
-        fix: "Use sessionStorage or memory",
+        fix: "Keep tokens in memory, or let a backend hold them",
         why: "localStorage is easy to use and persists across browser tab closures.",
-        impact: "Any Cross-Site Scripting (XSS) vulnerability or malicious NPM dependency can immediately read localStorage and exfiltrate long-lived refresh tokens and patient records.",
+        impact: "Any Cross-Site Scripting (XSS) vulnerability or malicious NPM dependency can immediately read localStorage and exfiltrate long-lived refresh tokens and patient records. sessionStorage is no safer against XSS: it only shortens how long the tokens persist.",
         codeBad: '// ❌ WRONG\nlocalStorage.setItem("smart_refresh_token", tokenResponse.refresh_token);',
-        codeGood: '// ✅ CORRECT\n// Keep in memory or short-lived sessionStorage + strict Content Security Policy\nsessionStorage.setItem("smart_session_token", tokenResponse.access_token);'
+        codeGood: '// ✅ CORRECT\n// Keep tokens in memory (or in a backend session) + a strict Content Security Policy\nlet tokens = tokenResponse; // gone on reload: run the SMART launch again'
       },
       {
         id: 3,
-        mistake: "Not validating aud claim in tokens",
+        mistake: "Trusting the id_token without verifying it",
         severity: "HIGH",
-        fix: "Always verify aud matches your FHIR server URL",
-        why: "Developers decode the JWT payload but forget to assert the audience claim.",
-        impact: "Vulnerable to token substitution attacks: an attacker can present a token minted for a different (or malicious) server to compromise patient record integrity.",
-        codeBad: '// ❌ WRONG\nconst payload = jwtDecode(token);\n// Proceeds without verifying who this token was created for!',
-        codeGood: '// ✅ CORRECT\nconst payload = jwtDecode(token);\nif (payload.aud !== expectedFhirBaseUrl) {\n  throw new Error("Security Violation: Token audience does not match FHIR server URL!");\n}'
+        fix: "Verify the id_token's signature, issuer, audience and expiry",
+        why: "Developers decode the id_token to read who signed in, but decoding does not prove the token is genuine or meant for their app.",
+        impact: "A forged or substituted id_token could make the app treat one person as another. Access tokens are different: they are meant for the FHIR server, which checks them; their format is up to the server, so the app should not rely on decoding them.",
+        codeBad: '// ❌ WRONG\nconst payload = jwtDecode(tokenResponse.id_token);\n// Trusts the claims without checking the signature or audience!',
+        codeGood: '// ✅ CORRECT (jose library)\nconst jwks = createRemoteJWKSet(new URL(smartConfig.jwks_uri));\nconst { payload } = await jwtVerify(tokenResponse.id_token, jwks, {\n  issuer: expectedIssuer,\n  audience: myClientId // id_token aud is your client_id\n});\n// Signature, iss, aud and exp are all checked'
       },
       {
         id: 4,
@@ -1085,13 +1110,13 @@
       },
       {
         step: 5,
-        title: "Copy access_token value → Paste at jwt.io to decode",
+        title: "Copy the id_token → decode it at jwt.io",
         filter: "jwt.io",
         method: "DEBUG",
         status: "Decoded",
         type: "jwt",
-        url: "Header (RS256) • Payload (iss, aud, sub, scope, exp)",
-        desc: "Copy the raw access_token or id_token string and paste it into https://jwt.io. Verify the 'aud' matches the FHIR server, 'exp' is in the future, and 'scope' contains the exact permissions approved."
+        url: "Header (RS256) • Payload (iss, sub, aud, exp, iat, fhirUser)",
+        desc: "With sandbox tokens only, paste the id_token into https://jwt.io to read its claims: 'aud' should be your client_id, 'iss' the server, and 'exp' in the future. Decoding does not prove a token is genuine; your app must verify the signature. Access tokens may not be JWTs at all; their format is up to the server."
       }
     ];
 
@@ -1102,12 +1127,11 @@
         title: "1. Wrong `aud` Parameter",
         sub: "Authorization Request Target Mismatch",
         request: "GET /smart/authorize?client_id=john-app&aud=https://evil.hack.com/fhir&scope=launch/patient...",
-        status: "400 Bad Request",
+        status: "302 Found: redirected back to the app with an error",
         response: {
-          error: "invalid_target",
-          error_description: "The 'aud' parameter 'https://evil.hack.com/fhir' does not match any registered FHIR resource server for this authorization endpoint."
+          Location: "https://app.example.org/callback?error=invalid_request&error_description=Unrecognized+aud&state=csrf_98a7b6c5"
         },
-        cause: "App passed an incorrect or typoed FHIR server URL in the authorization request. SMART v2 servers strictly validate that aud matches an approved base URL.",
+        cause: "App passed an incorrect or typoed FHIR server URL in the authorization request. SMART servers must check that aud is a FHIR server they protect. Because the client_id and redirect_uri are valid, the server reports the error by redirecting back to the app, as OAuth 2.0 requires.",
         fix: "Ensure your code sets 'aud' directly from the FHIR base server URL you used to fetch /.well-known/smart-configuration."
       },
       {
@@ -1158,12 +1182,11 @@
         title: "5. Unsupported Scope Requested",
         sub: "Requesting Scope Not in Server's Advertisement",
         request: "GET /smart/authorize?scope=launch/patient openid patient/SecretLab.cruds...",
-        status: "400 Bad Request",
+        status: "302 Found: redirected back to the app with an error",
         response: {
-          error: "invalid_scope",
-          error_description: "The scope 'patient/SecretLab.cruds' is not supported by this server or client registration."
+          Location: "https://app.example.org/callback?error=invalid_scope&error_description=Scope+patient%2FSecretLab.cruds+not+supported&state=csrf_98a7b6c5"
         },
-        cause: "App requested a scope that does not exist in the server's scopes_supported array or is not allowed for the client's registered profile.",
+        cause: "App requested a scope that does not exist in the server's scopes_supported array or is not allowed for the client's registration. Many servers do not fail at all: they grant a smaller set of scopes and list what was granted in the token response's scope field.",
         fix: "Inspect /.well-known/smart-configuration -> scopes_supported before formulating scope requests. Filter your requested scopes against this list."
       },
       {
@@ -1184,10 +1207,10 @@
         title: "7. redirect_uri Mismatch",
         sub: "Callback URL Not Pre-Registered with Server",
         request: "GET /smart/authorize?client_id=john-graph-app&redirect_uri=https://unknown.evil.org/callback...",
-        status: "400 Bad Request",
+        status: "400 Bad Request: an error page in the browser, no redirect",
         response: {
-          error: "invalid_redirect_uri",
-          error_description: "The redirect_uri 'https://unknown.evil.org/callback' does not match any redirect URIs registered for client 'john-graph-app'."
+          shown_to_user: "This app's return address (https://unknown.evil.org/callback) is not registered for client 'john-graph-app'.",
+          redirect: "None. OAuth 2.0 forbids sending the browser to an address that is not registered, since it may belong to an attacker."
         },
         cause: "Exact string mismatch between the redirect_uri in the request and the URL registered in the developer portal (e.g. trailing slash, http vs https).",
         fix: "Log into the vendor developer console (Epic, Oracle) and ensure redirect_uri matches character-for-character, including port and trailing slash."
@@ -1206,20 +1229,20 @@
       { term: "JWKS", category: "Acronyms", def: "JSON Web Key Set. A publicly accessible JSON document (at the jwks_uri endpoint) publishing the cryptographic public keys that apps use to verify JWT signatures." },
       { term: "LOINC", category: "Acronyms", def: "Logical Observation Identifiers Names and Codes. A standard coding system for clinical observations. For example, LOINC 4548-4 = HbA1c. Used inside FHIR Observation resources to identify what was measured." },
       { term: "MRN", category: "Acronyms", def: "Medical Record Number. A health system's internal patient identifier. Different from a FHIR Patient resource ID, though often mapped to it." },
-      { term: "OIDC", category: "Acronyms", def: "OpenID Connect. An identity authentication layer built on top of OAuth 2.0, adding the id_token and standardized user identity claims like sub, fhirUser, and name." },
+      { term: "OIDC", category: "Acronyms", def: "OpenID Connect. An identity layer built on top of OAuth 2.0 that adds the id_token and standard user claims such as sub and name. SMART adds its own fhirUser claim on top." },
       { term: "PHI", category: "Acronyms", def: "Protected Health Information. Any individually identifiable health information protected under HIPAA. Real EHR servers require SMART on FHIR authorization before returning PHI." },
       { term: "PKCE", category: "Acronyms", def: "Proof Key for Code Exchange (RFC 7636). A security extension to OAuth 2.0 that prevents authorization code interception attacks by requiring a code_verifier secret paired with a code_challenge hash." },
       { term: "REST", category: "Acronyms", def: "Representational State Transfer. An architectural style for web APIs. FHIR uses RESTful conventions: resources have URLs, HTTP verbs describe actions, and responses are JSON or XML." },
       { term: "RFC", category: "Acronyms", def: "Request for Comments. Documents published by the IETF (Internet Engineering Task Force) defining internet standards. OAuth 2.0 = RFC 6749, PKCE = RFC 7636, JWT = RFC 7519, Bearer tokens = RFC 6750." },
       { term: "SMART", category: "Acronyms", def: "Substitutable Medical Apps, Reusable Technologies. A set of open standards (built on OAuth 2.0 + FHIR) enabling apps to securely connect to any SMART-compatible EHR with a consistent authorization pattern." },
-      { term: "SSO", category: "Acronyms", def: "Single Sign-On. During EHR Launch, the clinician already authenticated to the EHR, so the authorization server can establish the SMART session without prompting for a separate login. Advertised via the sso-openid-connect capability." },
+      { term: "SSO", category: "Acronyms", def: "Single Sign-On. During an EHR launch the clinician is already signed in to the EHR, so many EHRs establish the SMART session without a second login. That is EHR behavior; it is not what the sso-openid-connect capability promises." },
       { term: "TLS", category: "Acronyms", def: "Transport Layer Security. The encryption protocol (formerly SSL) that secures HTTP traffic as HTTPS. All OAuth flows, token endpoints, and FHIR API calls must use HTTPS/TLS to protect tokens in transit." },
       { term: "TTL", category: "Acronyms", def: "Time To Live. The duration (in seconds) an access_token remains valid, specified in the token response as 'expires_in'. Typically 3600 seconds (1 hour) for SMART tokens." },
       { term: "URL", category: "Acronyms", def: "Uniform Resource Locator. A web address. In SMART on FHIR, URLs are used for FHIR base URLs, OAuth endpoints (authorization_endpoint, token_endpoint), redirect_uris, and JWKS endpoints." },
       // ── Tokens ────────────────────────────────────────────────────────────
       { term: "access_token", category: "Tokens", def: "An opaque string or signed JWT issued by the authorization server. Presented to the FHIR Resource Server via the 'Authorization: Bearer <token>' header to gain access to patient data within granted scopes. Never send to the id_token's intended audience." },
       { term: "id_token", category: "Tokens", def: "A signed JWT provided by OpenID Connect. Contains assertions about user identity (sub, fhirUser, name). Intended only for the client app UI — never send to the FHIR API as a Bearer token!" },
-      { term: "refresh_token", category: "Tokens", def: "A long-lived credential issued with offline_access scope. Sent to the token_endpoint (grant_type=refresh_token) to obtain a new access_token when the current one expires, without prompting the user to log in again." },
+      { term: "refresh_token", category: "Tokens", def: "A longer-lived credential issued when offline_access (or, in an EHR launch, online_access) is granted. Sent to the token_endpoint (grant_type=refresh_token) to obtain a new access_token when the current one expires, without prompting the user to log in again." },
       { term: "Bearer", category: "Tokens", def: "An HTTP Authorization scheme (RFC 6750). The header 'Authorization: Bearer <access_token>' tells the FHIR server to grant access to 'whoever bears (carries) this token'. Always requires HTTPS." },
       { term: "opaque token", category: "Tokens", def: "An access_token that is a random, server-side reference string (e.g. 'st_live_99a8b7c6...') with no readable payload. The FHIR server must call the introspection_endpoint to validate it. Contrast with JWT." },
       // ── OAuth Parameters & Claims ──────────────────────────────────────────
@@ -1227,7 +1250,7 @@
       { term: "code_challenge", category: "OAuth / Claims", def: "The hashed, public half of the PKCE pair. Computed as BASE64URL(SHA256(code_verifier)) and sent with the authorization request. Safe to transmit in the URL because SHA-256 is a one-way function." },
       { term: "code_verifier", category: "OAuth / Claims", def: "The secret, random string (43–128 chars) generated by the app before the authorization request. Kept in app memory and sent to the token_endpoint. The server hashes it to verify it matches the earlier code_challenge." },
       { term: "grant_type", category: "OAuth / Claims", def: "Specifies which OAuth 2.0 workflow is being used in a token request. SMART supports: authorization_code (user-facing flows), refresh_token (renewal), and client_credentials (backend services)." },
-      { term: "iss", category: "OAuth / Claims", def: "Issuer URL. Identifies the SMART authorization server. Passed to apps during EHR Launch (as ?iss=) to tell them where to find the /.well-known/smart-configuration document." },
+      { term: "iss", category: "OAuth / Claims", def: "Issuer. In an EHR launch, ?iss= is the FHIR server's base URL; the app adds /.well-known/smart-configuration to it to find the server's settings. Inside an id_token, iss is the OpenID issuer that signed the token." },
       { term: "nonce", category: "OAuth / Claims", def: "A unique, random value included in the authorization request and echoed in the id_token. Prevents replay attacks where an attacker tries to reuse a captured id_token." },
       { term: "redirect_uri", category: "OAuth / Claims", def: "The URL the authorization server redirects the browser to after the user approves access, delivering the authorization code. Must be pre-registered with the EHR and match exactly." },
       { term: "response_type", category: "OAuth / Claims", def: "Specifies what the authorization server should return. SMART uses response_type=code (the authorization code flow) — the server redirects with a temporary code that the app exchanges at the token_endpoint." },
@@ -1254,20 +1277,20 @@
       // ── SMART Capabilities ─────────────────────────────────────────────────
       { term: "authorize-post", category: "SMART Capabilities", def: "Capability flag indicating the authorization server accepts authorization parameters as an HTTP POST body instead of query string GET params, avoiding URL length limits." },
       { term: "client-confidential-asymmetric", category: "SMART Capabilities", def: "Capability indicating the server supports backend confidential clients authenticating at the token_endpoint using a signed private_key_jwt (asymmetric cryptography — no shared secret required)." },
-      { term: "client-confidential-symmetric", category: "SMART Capabilities", def: "Capability indicating the server supports confidential clients using a shared client_secret to authenticate at the token_endpoint (client_secret_basic or client_secret_post)." },
+      { term: "client-confidential-symmetric", category: "SMART Capabilities", def: "Capability indicating the server supports confidential user-facing apps that authenticate at the token_endpoint with a shared client_secret (client_secret_basic or client_secret_post). Backend services must use asymmetric keys instead." },
       { term: "client-public", category: "SMART Capabilities", def: "Capability indicating the server supports public clients (e.g. browser or mobile apps that cannot securely store a client_secret), authenticating via PKCE only (token_endpoint_auth_method=none)." },
-      { term: "context-banner", category: "SMART Capabilities", def: "Capability indicating the server can return 'need_patient_banner' and 'smart_style_url' context in the token response to help embedded apps display (or hide) the patient demographic header." },
+      { term: "context-banner", category: "SMART Capabilities", def: "Capability indicating the server can return 'need_patient_banner' in the token response, telling an embedded app whether to show its own patient header. The styling URL (smart_style_url) is a separate capability, context-style." },
       { term: "launch-ehr", category: "SMART Capabilities", def: "Capability indicating the server supports the EHR Launch workflow, where the EHR initiates the app launch by passing ?iss= and ?launch= parameters to the app's launch URL." },
       { term: "launch-standalone", category: "SMART Capabilities", def: "Capability indicating the server supports Standalone Launch, where the app starts independently (outside the EHR) and uses launch/patient to establish patient context." },
       { term: "permission-v1", category: "SMART Capabilities", def: "Capability indicating support for SMART v1 scope syntax: patient/Observation.read (read-only) and patient/Observation.write (write-only). Coarser than v2." },
       { term: "permission-v2", category: "SMART Capabilities", def: "Capability indicating support for SMART v2 granular scope syntax: patient/Observation.cruds where each letter grants a specific operation (c=create, r=read, u=update, d=delete, s=search)." },
-      { term: "sso-openid-connect", category: "SMART Capabilities", def: "Capability indicating the server supports OpenID Connect Single Sign-On, enabling EHR Launch flows to skip re-authentication if the clinician is already signed in to the EHR session." },
+      { term: "sso-openid-connect", category: "SMART Capabilities", def: "Capability indicating the server supports SMART's OpenID Connect profile: it can issue an id_token (when the app asks for openid and fhirUser) that identifies the signed-in user. Whether the user skips a login screen is up to the EHR." },
       // ── Security ───────────────────────────────────────────────────────────
-      { term: "code_challenge_method", category: "Security", def: "Specifies the hashing algorithm for PKCE. SMART v2 requires 'S256' (SHA-256). The deprecated 'plain' method (sending the raw verifier as the challenge) is not acceptable for production." },
+      { term: "code_challenge_method", category: "Security", def: "Specifies the hashing algorithm for PKCE. SMART requires 'S256' (SHA-256) and forbids 'plain' (sending the raw verifier as the challenge): servers SHALL NOT support it." },
       { term: "CSRF", category: "Security", def: "Cross-Site Request Forgery. An attack where a malicious site tricks an authenticated user's browser into making unwanted requests. The OAuth 'state' parameter prevents CSRF in authorization flows." },
       { term: "refresh token rotation", category: "Security", def: "A security pattern where the server issues a new refresh_token with every refresh grant and immediately revokes the old one. If a stolen token is used by an attacker, the legitimate app's next refresh fails, detecting the breach." },
-      { term: "S256", category: "Security", def: "The PKCE code_challenge_method value meaning BASE64URL(SHA256(code_verifier)). SHA-256 is a one-way cryptographic hash — the server can verify the challenge without ever learning the original verifier." },
-      { term: "XSS", category: "Security", def: "Cross-Site Scripting. An attack injecting malicious JavaScript into a web app. Storing tokens in localStorage makes them vulnerable to XSS; session-scoped memory or sessionStorage is safer." },
+      { term: "S256", category: "Security", def: "The PKCE code_challenge_method value meaning BASE64URL(SHA256(code_verifier)). SHA-256 is one-way, so anyone who sees the challenge in the sign-in URL cannot work out the verifier. The app reveals the verifier only to the token_endpoint, which hashes it and compares." },
+      { term: "XSS", category: "Security", def: "Cross-Site Scripting. An attack injecting malicious JavaScript into a web app. Such a script can read localStorage and sessionStorage alike, so keep tokens in memory (or let a backend hold them) and use a strict Content Security Policy." },
       // ── SMART Context & Discovery ──────────────────────────────────────────
       { term: "/.well-known/smart-configuration", category: "Discovery", def: "The standard URL path appended to the FHIR base URL that returns the SMART Discovery document — a JSON object listing all OAuth endpoints, capabilities, and supported scopes for that server." },
       { term: "CapabilityStatement", category: "Discovery", def: "A clinical metadata document at /metadata describing the FHIR server's supported resources, profiles, and search parameters. Separate from SMART Discovery — covers WHAT clinical data is available, not HOW to authorize." },
@@ -1384,7 +1407,7 @@
           "Permits local caching of patient records in SQLite"
         ],
         answer: 1,
-        explanation: "'offline_access' is the OAuth scope that requests a refresh_token, allowing the app to renew access without prompting the user to log in again."
+        explanation: "'offline_access' requests a refresh_token, allowing the app to renew access without prompting the user to log in again, even after they leave. (Its sibling 'online_access' requests one that works only while the user is still signed in to the EHR.)"
       },
       {
         id: 9,
@@ -1479,7 +1502,7 @@
                     display: "High"
                   }
                 ],
-                text: "Elevated (Pre-diabetes / controlled DM)"
+                text: "Elevated (diabetes range)"
               }
             ],
             referenceRange: [
@@ -3421,7 +3444,7 @@
                             <span>Capstone Milestone Reached!</span>
                           </div>
                           <p className="text-sm text-slate-300 mt-0.5">
-                            Test your complete SMART on FHIR mastery with our 10-question certified assessment.
+                            Test what you have learned with a 10-question final assessment.
                           </p>
                         </div>
                         <button
@@ -4540,8 +4563,8 @@
                               'Header: { "alg": "RS256", "kid": "smart-key-1", "typ": "JWT" } — Tells the verifier which key in jwks_uri signed this token.'}
                             {selectedJwtPart === "payload" &&
                               (launchMode === "ehr"
-                                ? 'Payload (EHR Launch id_token): { "iss": "https://api.mock.health", "sub": "practitioner-dr-smith-101", "aud": "john-graph-app", "fhirUser": "Practitioner/dr-smith-101" }'
-                                : 'Payload (Standalone id_token): { "iss": "https://api.mock.health", "sub": "user-john-caregiver-42", "aud": "john-graph-app", "fhirUser": "RelatedPerson/john-42" }')}
+                                ? 'Payload (EHR Launch id_token): { "iss": "https://api.mock.health", "sub": "practitioner-dr-smith-101", "aud": "john-graph-app", "exp": 1740003600, "iat": 1740000000, "fhirUser": "Practitioner/dr-smith-101" }'
+                                : 'Payload (Standalone id_token): { "iss": "https://api.mock.health", "sub": "user-john-caregiver-42", "aud": "john-graph-app", "exp": 1740003600, "iat": 1740000000, "fhirUser": "RelatedPerson/john-42" }')}
                             {selectedJwtPart === "signature" &&
                               "Signature: RSASHA256(base64Url(Header) + '.' + base64Url(Payload), PrivateKey) — Verified using public keys from https://api.mock.health/smart/jwks."}
                           </div>
@@ -4681,10 +4704,10 @@
                                 <span>Refresh Token Rotation & Replay Attack Protection</span>
                               </div>
                               <p className="text-slate-300 text-sm leading-relaxed">
-                                Under <strong>OAuth 2.0 Security Best Current Practice</strong> (and SMART v2), authorization servers MUST rotate refresh tokens on every single use. When Generation #{tokenGeneration - 1} was redeemed, it was permanently invalidated.
+                                The <strong>OAuth 2.0 Security Best Current Practice</strong> (RFC 9700) says a refresh token given to a public app must either be tied to that app (sender-constrained) or rotated on every use. SMART lets each server choose. This simulated server rotates: when Generation #{tokenGeneration - 1} was redeemed, it was permanently invalidated.
                               </p>
                               <div className="p-2.5 rounded bg-slate-950 border border-slate-800 text-xs space-y-1 text-slate-400">
-                                <div>• <strong>Replay Detection:</strong> If an attacker steals and tries to reuse the old Generation #{tokenGeneration - 1} refresh token, the server immediately detects a breach and invalidates the entire token family!</div>
+                                <div>• <strong>Replay Detection:</strong> A server that rotates can spot reuse: if an attacker replays the old Generation #{tokenGeneration - 1} refresh token, the server can revoke the whole token family.</div>
                                 <div>• <strong>Bound to Client:</strong> The refresh token cannot be used by any other client_id.</div>
                               </div>
                             </div>
@@ -4695,7 +4718,7 @@
                       {/* FHIR API Test Buttons */}
                       <div className="p-4 rounded-xl bg-slate-950 border border-slate-800 space-y-3">
                         <div className="text-xs font-bold text-white">
-                          Test FHIR API Requests & LoginRadius Token Boundary Rules:
+                          Test FHIR API requests and token boundary rules:
                         </div>
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                           <button
@@ -5110,7 +5133,7 @@
                           ) : fhirApiResult === "wrong_id_token" ? (
                             <div className="space-y-1.5">
                               <div className="text-rose-400 font-bold">
-                                HTTP/1.1 401 Unauthorized (LoginRadius Mistake #1: ID Token Sent to API!)
+                                HTTP/1.1 401 Unauthorized (Mistake: ID token sent to the API)
                               </div>
                               <pre className="code-island text-rose-300 whitespace-pre-wrap">
                                 {JSON.stringify(
@@ -5127,7 +5150,7 @@
                           ) : fhirApiResult === "ui_access_token_mistake" ? (
                             <div className="space-y-1.5">
                               <div className="text-amber-400 font-bold">
-                                App UI Warning (LoginRadius Mistake #2: Reading Access Token for Identity)
+                                App UI Warning (Mistake: reading the access token for identity)
                               </div>
                               <p className="text-slate-300 font-sans">
                                 Access tokens are meant for the <strong>FHIR Resource Server</strong>, not for the client app to identify the logged-in user! If the server issues an <strong>Opaque Access Token</strong> (<code className="code-inline">st_live_opaque...</code>), your app cannot decode it at all. Always read user identity (<code className="code-inline">fhirUser</code>, <code className="code-inline">name</code>) from the <strong><code className="code-inline">id_token</code></strong>.
@@ -5395,10 +5418,6 @@
               <div className="bg-slate-900/80 border border-slate-800 rounded-2xl p-5 sm:p-6 shadow-sm space-y-5">
                 <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-slate-800 pb-4">
                   <div>
-                    <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-md text-xs font-semibold bg-amber-500/15 text-amber-300 border border-amber-500/30 mb-1">
-                      <KeyRound className="w-3.5 h-3.5" />
-                      LoginRadius Visual Architecture + OIDC & OAuth 2.0 Token Separation
-                    </span>
                     <h2 className="text-xl font-bold text-white">
                       ID Token vs. Access Token vs. SMART Launch Context
                     </h2>
@@ -5599,7 +5618,8 @@
                       <div className="pl-4 bg-indigo-500/20 text-indigo-200 font-bold px-2 py-0.5 rounded border border-indigo-500/40">
                         "fhirUser": "https://api.mock.health/fhir/{fhirUserLaunchMode === "ehr" ? "Practitioner/dr-smith-101" : "RelatedPerson/john-caregiver-42"}",
                       </div>
-                      <div className="pl-4 text-slate-400">"exp": 1740003600</div>
+                      <div className="pl-4 text-slate-400">"exp": 1740003600,</div>
+                      <div className="pl-4 text-slate-400">"iat": 1740000000</div>
                       <div>{"}"}</div>
                     </div>
 
@@ -5607,8 +5627,8 @@
                       2. How the App Extracts the <code className="code-inline">fhirUser</code> URI:
                     </div>
                     <pre className="code-island p-3 rounded-lg bg-slate-900 border border-slate-800 font-mono text-xs text-emerald-300 whitespace-pre-wrap">
-                      {`// 1. Decode the signed id_token
-const payload = jwtDecode(tokenResponse.id_token);
+                      {`// 1. Verify the id_token's signature, then read its claims
+const { payload } = await jwtVerify(tokenResponse.id_token, jwks, { issuer, audience: clientId });
 
 // 2. Extract the relative or absolute FHIR resource URL
 const userResourceUrl = payload.fhirUser;
@@ -5915,7 +5935,7 @@ const userResourceUrl = payload.fhirUser;
                       </span>
                     </div>
                     <p className="text-sm text-slate-400">
-                      Supports core launches and offline_access. Missing standard OIDC SSO, authorize-post, and v1/v2 tags.
+                      SMART v1 and v2 scopes, OpenID Connect, POST authorization, banner and style context, and online as well as offline refresh tokens.
                     </p>
                     <div className="flex flex-wrap gap-1.5 pt-1">
                       {VENDOR_CAPABILITIES.oracle.map((cap) => {
@@ -5936,7 +5956,7 @@ const userResourceUrl = payload.fhirUser;
                       })}
                     </div>
                     <div className="p-2.5 rounded-lg bg-amber-950/30 border border-amber-500/30 text-xs text-amber-200">
-                      <strong>Oracle Missing:</strong> sso-openid-connect, authorize-post, permission-v1, permission-v2, context-style, context-banner.
+                      <strong>Oracle does not advertise:</strong> context-standalone-patient. <strong>Oracle adds:</strong> permission-online, health-cards. Lists copied from each sandbox&rsquo;s live discovery file on 16 November 2026; vendors change them over time.
                     </div>
                   </div>
 
@@ -6000,7 +6020,7 @@ const userResourceUrl = payload.fhirUser;
                     <div className="flex items-center gap-4 text-xs pt-1 text-slate-400 font-mono">
                       <span>Epic: {CAPABILITY_DEFINITIONS[capabilityExpanded].epic ? "✅ Supported" : "❌ Not Supported"}</span>
                       <span>Oracle: {CAPABILITY_DEFINITIONS[capabilityExpanded].oracle ? "✅ Supported" : "❌ Not Supported"}</span>
-                      <span>Mock Lab: ✅ Supported</span>
+                      <span>Mock Lab: {VENDOR_CAPABILITIES.mock.includes(capabilityExpanded) ? "✅ Supported" : "❌ Not Supported"}</span>
                     </div>
                   </div>
                 )}
@@ -6021,7 +6041,7 @@ const userResourceUrl = payload.fhirUser;
                       Scope Wildcard vs. Specific: <code className="code-inline">patient/*.rs</code> vs. <code className="code-inline">patient/Observation.rs</code>
                     </h3>
                     <p className="text-sm text-slate-400 mt-0.5">
-                      Understanding clinical scope blast radius and Epic's production registration rules.
+                      How much a wildcard scope exposes compared with a specific one.
                     </p>
                   </div>
 
@@ -6064,7 +6084,6 @@ const userResourceUrl = payload.fhirUser;
                     <ul className="space-y-2 text-slate-300">
                       <li>• <strong>Access Scope:</strong> Strictly limited to Observation resources (vital signs, lab panels, HbA1c, glucose).</li>
                       <li>• <strong>When to Use:</strong> Production graphing, lab monitoring, and focused patient-facing apps.</li>
-                      <li>• <strong>Epic Production Requirement:</strong> Epic actively enforces least privilege during app registration. Requests for wildcards are routinely blocked.</li>
                       <li>• <strong>Security Blast Radius:</strong> Low. If an access token leaks, attacker only sees observations, not medications or sensitive diagnoses.</li>
                     </ul>
                   </div>
@@ -6081,9 +6100,8 @@ const userResourceUrl = payload.fhirUser;
                       </span>
                     </div>
                     <ul className="space-y-2 text-slate-300">
-                      <li>• <strong>Access Scope:</strong> Grants read & search across all 140+ clinical FHIR resources (Conditions, Medications, Mental Health notes, Allergies).</li>
+                      <li>• <strong>Access Scope:</strong> Grants read & search across every resource type the server makes available for this patient (for example Conditions, Medications, Allergies and clinical notes).</li>
                       <li>• <strong>When to Use:</strong> Early prototyping, bulk record export tools, comprehensive personal health records (PHRs).</li>
-                      <li>• <strong>Epic Production Stance:</strong> Disapproved for narrow apps. Requires extensive institutional security review.</li>
                       <li>• <strong>Security Blast Radius:</strong> CRITICAL. Token compromise exposes entire patient medical chart.</li>
                     </ul>
                   </div>
@@ -6377,7 +6395,6 @@ const userResourceUrl = payload.fhirUser;
                           className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-1.5 font-mono text-sky-300"
                         >
                           <option value="private_key_jwt">private_key_jwt (Asymmetric RSA/EC)</option>
-                          <option value="client_secret_post">client_secret_post (Shared Secret)</option>
                         </select>
                       </div>
                       <div className="space-y-1">
@@ -6450,7 +6467,7 @@ Content-Type: application/x-www-form-urlencoded
 
 grant_type=client_credentials
 &client_assertion_type=urn:ietf:params:oauth:client-assertion-type:jwt-bearer
-&client_assertion=eyJhbGciOiJSUzI1NiIsImtpZCI6InN5c3RlbS1rZXktMSJ9...
+&client_assertion=eyJhbGciOiJSUzM4NCIsImtpZCI6InN5c3RlbS1rZXktMSIsInR5cCI6IkpXVCJ9...
 &scope=${encodeURIComponent(backendScopes.join(" "))}`}
                         </pre>
                         <button
