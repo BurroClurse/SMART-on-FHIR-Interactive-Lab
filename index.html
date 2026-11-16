@@ -2142,7 +2142,7 @@
                       { id: "walkthrough", text: "Work through ten steps on a real server\u2019s settings file, with a quick check after each one." },
                       { id: "simulator", text: "Play the whole sign-in, step by step, between the app, the browser and the servers." },
                       { id: "tokens", text: "See what each token is for and what is inside it." },
-                      { id: "deeper", text: "Reference material for building or debugging a real connection." }
+                      { id: "deeper", text: "Reference material for building or debugging a real connection, plus a real launch you can try yourself." }
                     ].map((item, i) => (
                       <li key={item.id}>
                         <button
@@ -2185,6 +2185,34 @@
                   <div><dt className="font-semibold text-white">The FHIR server</dt><dd className="leading-relaxed">Holds Eleanor&rsquo;s records in <Term t="FHIR">FHIR</Term> format. It only answers requests that carry a valid token.</dd></div>
                   <div><dt className="font-semibold text-white">Behind the scenes</dt><dd className="leading-relaxed">Watch the Flow also shows the gateway and database that sit in front of and behind those servers.</dd></div>
                 </dl>
+              </section>
+
+              <section aria-labelledby="why-heading" className="border-t border-slate-700 pt-6 grid gap-6 lg:grid-cols-12">
+                <div className="lg:col-span-7 space-y-4">
+                  <h2 id="why-heading" className="text-xl font-semibold text-white">Why every certified EHR supports this</h2>
+                  <p className="text-slate-300 leading-relaxed max-w-prose">
+                    The 21st Century Cures Act (2016) told the federal government to make health records reachable through
+                    standard APIs &ldquo;without special effort.&rdquo; ONC&rsquo;s Cures Act Final Rule (2020) turned that into a
+                    certification requirement, <span className="font-semibold text-white">&sect;&nbsp;170.315(g)(10)</span>, and certified EHR developers had to ship it by the end of 2022.
+                  </p>
+                  <p className="text-slate-300 leading-relaxed max-w-prose">
+                    That is why Epic, Oracle Health and every other certified EHR publish a discovery file like the one in the Guided Lab,
+                    and why a patient&rsquo;s app can connect to any of them the same way.
+                  </p>
+                  <p>
+                    <a href="https://www.healthit.gov/test-method/standardized-api-patient-and-population-services" className="text-sky-300 underline underline-offset-2 hover:text-sky-200" target="_blank" rel="noopener noreferrer">Read the (g)(10) requirement at HealthIT.gov</a>
+                  </p>
+                </div>
+                <div className="lg:col-span-5 lg:border-l lg:border-slate-700 lg:pl-8 space-y-3">
+                  <h3 className="text-lg font-semibold text-white">The standards it names today</h3>
+                  <dl className="space-y-2 text-slate-300">
+                    <div><dt className="inline font-semibold text-white">FHIR R4 (4.0.1).</dt> <dd className="inline">The data format and REST API.</dd></div>
+                    <div><dt className="inline font-semibold text-white">USCDI v3 and US Core 6.1.0.</dt> <dd className="inline">Which data must be shared, and its exact FHIR shape.</dd></div>
+                    <div><dt className="inline font-semibold text-white">SMART App Launch 2.0.0.</dt> <dd className="inline">Discovery, scopes and the launch flow this lab teaches.</dd></div>
+                    <div><dt className="inline font-semibold text-white">OpenID Connect Core 1.0.</dt> <dd className="inline">The <Term t="id_token">id_token</Term> that says who signed in.</dd></div>
+                    <div><dt className="inline font-semibold text-white">Bulk Data Access 1.0.</dt> <dd className="inline">Exporting data for a whole group of patients.</dd></div>
+                  </dl>
+                </div>
               </section>
 
               <section aria-labelledby="concepts-heading" className="border-t border-slate-700 pt-6 space-y-5">
@@ -5702,7 +5730,33 @@ const userResourceUrl = payload.fhirUser;
                   Reference material for when you are building or debugging a real connection. Open any section.
                 </p>
               </div>
-              <div className="border-b border-slate-700">
+              <section className="pt-2">
+                <h3 className="text-sm font-semibold text-slate-400 pb-1">Try it for real</h3>
+                <div className="border-b border-slate-700">
+                <Disclosure title="Try a real SMART launch" summary="Run the same sign-in against a free public SMART test server and watch the real requests in your browser.">
+                  <div className="space-y-5 max-w-4xl text-slate-300 leading-relaxed">
+                    <p>
+                      Everything else in this lab is simulated. The <a href="https://launch.smarthealthit.org/" className="text-sky-300 underline underline-offset-2 hover:text-sky-200" target="_blank" rel="noopener noreferrer">SMART App Launcher</a>,
+                      run by the SMART Health IT project, is a real test server with synthetic patients. It needs no account.
+                    </p>
+                    <ol className="space-y-3 list-decimal pl-5 marker:text-slate-500">
+                      <li>Open the launcher. Under <span className="font-semibold text-white">Launch Type</span>, choose <span className="font-semibold text-white">Patient Standalone Launch</span>. Leave <span className="font-semibold text-white">FHIR Version</span> on R4.</li>
+                      <li>Open your browser&rsquo;s developer tools on the <span className="font-semibold text-white">Network</span> tab. In Chrome, tick <span className="font-semibold text-white">Preserve log</span> so the requests stay listed while the page redirects.</li>
+                      <li>Click <span className="font-semibold text-white">Launch Sample App</span>, pick a patient, and approve the access.</li>
+                      <li>In the Network list, find the request to <code className="code-inline">/auth/authorize</code>. Its address carries <code className="code-inline">scope</code>, <code className="code-inline">state</code>, <code className="code-inline">aud</code> and <code className="code-inline">code_challenge</code>, the same parameters as in Watch the Flow.</li>
+                      <li>Find the POST to <code className="code-inline">/auth/token</code>. The request sends the <code className="code-inline">code_verifier</code>. The response returns the <code className="code-inline">access_token</code>, the <code className="code-inline">patient</code> ID and, when the app asked for <code className="code-inline">openid</code>, an <code className="code-inline">id_token</code>.</li>
+                    </ol>
+                    <p>The launcher&rsquo;s discovery file is public too. Open it and compare it with the one in the Guided Lab.</p>
+                    <div className="code-island rounded-xl border p-4 overflow-x-auto">
+                      <span className="code-label">Discovery file (opens in a new tab)</span>
+                      <a href="https://launch.smarthealthit.org/v/r4/fhir/.well-known/smart-configuration" className="text-sky-300 font-mono text-sm break-all underline underline-offset-2 hover:text-sky-200" target="_blank" rel="noopener noreferrer">https://launch.smarthealthit.org/v/r4/fhir/.well-known/smart-configuration</a>
+                    </div>
+                    <p>
+                      It advertises <Term t="S256">S256</Term> for PKCE, and capabilities such as <code className="code-inline">launch-ehr</code>, <code className="code-inline">launch-standalone</code> and <code className="code-inline">permission-v2</code>.
+                      To practise the failures in &ldquo;Error scenarios&rdquo; below, the launcher&rsquo;s <span className="font-semibold text-white">Simulated Error</span> menu can force an invalid scope, an expired token and other errors.
+                    </p>
+                  </div>
+                </Disclosure>
                 <Disclosure title="Compare real vendor sandboxes" summary={"Epic, Oracle Health and a mock server: which features each one advertises in its discovery file."}>
               {/* NEW SECTION A: REAL VENDOR SANDBOX COMPARISON */}
               <section className="space-y-5">
@@ -5884,6 +5938,11 @@ const userResourceUrl = payload.fhirUser;
               </section>
 
                 </Disclosure>
+                </div>
+              </section>
+              <section className="pt-10">
+                <h3 className="text-sm font-semibold text-slate-400 pb-1">Permissions and data</h3>
+                <div className="border-b border-slate-700">
                 <Disclosure title="Wildcard scopes vs. specific scopes" summary={<>What <code className="code-inline">patient/*.rs</code> really grants, and why narrow scopes are safer.</>}>
               {/* NEW SECTION B: SCOPE WILDCARD VS SPECIFIC */}
               <section className="space-y-5">
@@ -5963,6 +6022,96 @@ const userResourceUrl = payload.fhirUser;
               </section>
 
                 </Disclosure>
+                <Disclosure title="Granular scopes: narrowing a permission" summary="SMART v2 can limit a scope to one kind of data, such as lab results only.">
+                  <div className="grid gap-6 lg:grid-cols-2">
+                    <div className="space-y-4 text-slate-300 leading-relaxed">
+                      <p>
+                        <code className="code-inline">patient/Observation.rs</code> lets an app read every Observation: lab results, vital signs,
+                        social history and more. John&rsquo;s graphing app only needs lab results.
+                      </p>
+                      <p>
+                        SMART v2 lets the app add a FHIR search filter to the end of a scope, after a question mark. The server then grants
+                        only the records that match.
+                      </p>
+                      <p>
+                        The SMART specification shows this <code className="code-inline">category</code> filter as its standard example, and
+                        treats more advanced filters (search modifiers, chained parameters) as experimental. ONC&rsquo;s HTI-1 rule separately
+                        requires certified EHRs to support these finer scopes for Condition and Observation categories.
+                      </p>
+                      <p>Before relying on it, check that the server&rsquo;s discovery file lists <code className="code-inline">permission-v2</code>.</p>
+                      <p><a href="https://hl7.org/fhir/smart-app-launch/scopes-and-launch-context.html" className="text-sky-300 underline underline-offset-2 hover:text-sky-200" target="_blank" rel="noopener noreferrer">Read the SMART scopes specification</a></p>
+                    </div>
+                    <div className="space-y-3">
+                      <div className="code-island rounded-xl border p-4 overflow-x-auto">
+                        <span className="code-label">Scope: every observation</span>
+                        <pre className="text-sm text-slate-300 whitespace-pre-wrap break-all">patient/Observation.rs</pre>
+                      </div>
+                      <div className="code-island rounded-xl border p-4 overflow-x-auto">
+                        <span className="code-label">Scope: lab results only</span>
+                        <pre className="text-sm whitespace-pre-wrap break-all"><span className="text-slate-300">patient/Observation.rs</span><span className="text-amber-300">?category=</span><span className="text-emerald-300">http://terminology.hl7.org/CodeSystem/observation-category|laboratory</span></pre>
+                      </div>
+                      <div className="code-island rounded-xl border p-4 overflow-x-auto">
+                        <span className="code-label">Scope: problem-list conditions only</span>
+                        <pre className="text-sm whitespace-pre-wrap break-all"><span className="text-slate-300">patient/Condition.rs</span><span className="text-amber-300">?category=</span><span className="text-emerald-300">http://terminology.hl7.org/CodeSystem/condition-category|problem-list-item</span></pre>
+                      </div>
+                    </div>
+                  </div>
+                </Disclosure>
+                <Disclosure title="Where the data rules come from: USCDI and US Core" summary="Which data every certified EHR must share, and the exact shape each piece takes in FHIR.">
+                  <div className="grid gap-6 lg:grid-cols-2">
+                    <div className="space-y-4 text-slate-300 leading-relaxed">
+                      <p>SMART decides who may see the data. Two other standards decide what the data is.</p>
+                      <p>
+                        <span className="font-semibold text-white">USCDI</span> (United States Core Data for Interoperability) is ONC&rsquo;s list of data that certified EHRs
+                        must be able to share, such as laboratory results, vital signs, medications, allergies and problems. The certification
+                        rule names version 3.
+                      </p>
+                      <p>
+                        <span className="font-semibold text-white">US Core</span> is the HL7 implementation guide that turns that list into FHIR rules. For each kind of data it
+                        publishes a <em>profile</em>: the fields that must be present and the code systems they must use. The certification rule
+                        names US Core 6.1.0.
+                      </p>
+                      <p>
+                        Eleanor&rsquo;s HbA1c result follows the <span className="font-semibold text-white">US Core Laboratory Result Observation</span> profile. It must have a
+                        status, the category <code className="code-inline">laboratory</code>, a code for the test (a <Term t="LOINC">LOINC</Term> code
+                        when one exists) and the patient it belongs to. The date and the value are &ldquo;Must Support&rdquo;: when the server has
+                        them, it sends them.
+                      </p>
+                      <p><a href="https://hl7.org/fhir/us/core/STU6.1/StructureDefinition-us-core-observation-lab.html" className="text-sky-300 underline underline-offset-2 hover:text-sky-200" target="_blank" rel="noopener noreferrer">Read the US Core lab result profile</a></p>
+                    </div>
+                    <div className="code-island rounded-xl border p-4 overflow-x-auto">
+                      <span className="code-label">JSON: Eleanor&rsquo;s lab result, US Core shape</span>
+                      <pre className="text-sm text-slate-300 leading-relaxed">{`{
+  "resourceType": "Observation",
+  "status": "final",
+  "category": [{
+    "coding": [{
+      "system": "http://terminology.hl7.org/CodeSystem/observation-category",
+      "code": "laboratory"
+    }]
+  }],
+  "code": {
+    "coding": [{
+      "system": "http://loinc.org",
+      "code": "4548-4",
+      "display": "Hemoglobin A1c/Hemoglobin.total in Blood"
+    }]
+  },
+  "subject": { "reference": "Patient/pat-mother-eleanor-456" },
+  "effectiveDateTime": "2026-03-14",
+  "valueQuantity": {
+    "value": 7.2, "unit": "%",
+    "system": "http://unitsofmeasure.org", "code": "%"
+  }
+}`}</pre>
+                    </div>
+                  </div>
+                </Disclosure>
+                </div>
+              </section>
+              <section className="pt-10">
+                <h3 className="text-sm font-semibold text-slate-400 pb-1">Building and debugging</h3>
+                <div className="border-b border-slate-700">
                 <Disclosure title="Seven common developer mistakes" summary={"Insecure habits that show up in real SMART apps, why they happen, and the fix for each."}>
               {/* NEW SECTION C: DEVELOPER ANTI-PATTERNS (7-ROW TABLE) */}
               <section className="space-y-4">
@@ -6320,6 +6469,54 @@ grant_type=client_credentials
               </section>
 
                 </Disclosure>
+                <Disclosure title="Bulk data export ($export)" summary="How a backend service downloads data for a whole group of patients at once.">
+                  <div className="space-y-5 max-w-4xl text-slate-300 leading-relaxed">
+                    <p>
+                      Backend services usually exist to do this. Instead of one request per patient, the service asks the server to prepare
+                      files for a whole group, such as a clinic&rsquo;s diabetes registry, and downloads them when they are ready. It uses a
+                      <code className="code-inline">system/</code> token from the <code className="code-inline">client_credentials</code> flow above.
+                      The certification rule requires certified EHRs to support export for a group of patients.
+                    </p>
+                    <ol className="space-y-5 list-decimal pl-5 marker:text-slate-500">
+                      <li className="space-y-2">
+                        <p><span className="font-semibold text-white">Start the export.</span> The server answers at once with <code className="code-inline">202 Accepted</code> and a status address in <code className="code-inline">Content-Location</code>.</p>
+                        <div className="code-island rounded-xl border p-4 overflow-x-auto">
+                          <span className="code-label">HTTP request and response</span>
+                          <pre className="text-sm text-slate-300 leading-relaxed">{`GET /fhir/Group/diabetes-registry/$export?_type=Patient,Observation
+Accept: application/fhir+json
+Prefer: respond-async
+Authorization: Bearer eyJhbGciOi...
+
+HTTP/1.1 202 Accepted
+Content-Location: https://api.mock.health/bulkstatus/7c1f`}</pre>
+                        </div>
+                      </li>
+                      <li className="space-y-2">
+                        <p><span className="font-semibold text-white">Check the status address.</span> <code className="code-inline">202</code> means still working. <code className="code-inline">200</code> means done, with a list of files.</p>
+                        <div className="code-island rounded-xl border p-4 overflow-x-auto">
+                          <span className="code-label">HTTP response when the export is finished</span>
+                          <pre className="text-sm text-slate-300 leading-relaxed">{`HTTP/1.1 200 OK
+Content-Type: application/json
+
+{
+  "transactionTime": "2026-11-16T14:02:11Z",
+  "request": "https://api.mock.health/fhir/Group/diabetes-registry/$export?_type=Patient,Observation",
+  "requiresAccessToken": true,
+  "output": [
+    { "type": "Patient", "url": "https://api.mock.health/files/patient.ndjson" },
+    { "type": "Observation", "url": "https://api.mock.health/files/observation.ndjson" }
+  ],
+  "error": []
+}`}</pre>
+                        </div>
+                      </li>
+                      <li>
+                        <p><span className="font-semibold text-white">Download each file</span> with the same token. Each file is NDJSON (newline-delimited JSON): every line is one complete FHIR resource, served as <code className="code-inline">application/fhir+ndjson</code>.</p>
+                      </li>
+                    </ol>
+                    <p><a href="https://hl7.org/fhir/uv/bulkdata/export.html" className="text-sky-300 underline underline-offset-2 hover:text-sky-200" target="_blank" rel="noopener noreferrer">Read the Bulk Data Access specification</a></p>
+                  </div>
+                </Disclosure>
                 <Disclosure title="Error scenarios and how to fix them" summary={"Seven real failures, the exact server response for each, and how to fix it."}>
               {/* NEW FEATURE E: ERROR SCENARIOS LAB */}
               <section className="space-y-4">
@@ -6400,7 +6597,8 @@ grant_type=client_credentials
                 })()}
               </section>
                 </Disclosure>
-              </div>
+                </div>
+              </section>
             </main>
           )}
 
