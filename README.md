@@ -30,7 +30,7 @@ The lab is organized as a suggested path for people new to SMART on FHIR. Every 
 ### 5. Go Deeper
 * Collapsed reference sections: vendor sandbox comparison (Epic, Oracle Health, mock server), wildcard vs. specific scopes, seven developer anti-patterns, a DevTools debugging guide, backend services (`client_credentials`), and seven error scenarios with fixes.
 
-A searchable 79-term glossary opens from any page.
+A searchable 123-term glossary opens from any page, including a Plain-Language Basics category for readers new to the technical words.
 
 ---
 

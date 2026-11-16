@@ -9,7 +9,7 @@
   <meta property="og:type" content="website" />
   <meta property="og:site_name" content="SMART on FHIR Interactive Lab" />
   <meta property="og:title" content="SMART on FHIR Interactive Lab" />
-  <meta property="og:description" content="A hands-on lab for SMART on FHIR discovery, scopes, OAuth 2.0 with PKCE, and tokens. Ten guided steps, a full sign-in simulator, and a 79-term glossary." />
+  <meta property="og:description" content="A hands-on lab for SMART on FHIR discovery, scopes, OAuth 2.0 with PKCE, and tokens. Ten guided steps, a full sign-in simulator, and a 123-term glossary, with plain-language basics." />
   <meta property="og:url" content="https://burroclurse.github.io/SMART-on-FHIR-Interactive-Discovery-OAuth-2.0-Lab/" />
   <meta property="og:image" content="https://burroclurse.github.io/SMART-on-FHIR-Interactive-Discovery-OAuth-2.0-Lab/og-image.png" />
   <meta property="og:image:width" content="1200" />
@@ -616,7 +616,7 @@
           viaProxy: true,
           label: "1. Download SMART Discovery (/.well-known/smart-configuration)",
           detail:
-            "The FHIR App sends an HTTP GET request through the Reverse Proxy (•) to read `authorization_endpoint`, `token_endpoint`, `capabilities`, and `code_challenge_methods_supported` (S256)."
+            "The FHIR App sends an HTTP GET request through the Reverse Proxy (•) to read `authorization_endpoint`, `token_endpoint`, `capabilities`, and `code_challenge_methods_supported` (S256). Epic's diagram calls this downloading the FHIR conformance statement: older servers listed these addresses in the CapabilityStatement at `/metadata`, and SMART 2 servers publish this discovery file."
         },
         {
           num: 2,
@@ -785,7 +785,7 @@
           viaProxy: true,
           label: "16. [Renewal] POST /smart/token (grant_type=refresh_token)",
           detail:
-            "When the `access_token` expires after 3600s, the App sends its `refresh_token` (`offline_access`) to `/smart/token` without interrupting the user."
+            "When the `access_token` expires after 3600s, the App sends its `refresh_token` (`offline_access`) to `/smart/token` without interrupting the user. In Epic, refresh tokens go only to confidential apps (apps with their own server) registered with 'Requires Persistent Access'."
         },
         {
           num: 17,
@@ -951,7 +951,7 @@
       "permission-v2": {
         name: "SMART v2 Granular Scopes",
         category: "Permissions",
-        desc: "Supports SMART v2 granular action letters (e.g. '.rs' for read/search, '.cruds' for full lifecycle).",
+        desc: "Supports SMART v2 granular action letters (e.g. '.rs' for read/search, '.cruds' for full lifecycle). Epic supports v2 scope syntax from its November 2024 version.",
         epic: true,
         oracle: true
       },
@@ -965,7 +965,7 @@
       "authorize-post": {
         name: "Authorize via POST",
         category: "Protocol",
-        desc: "Allows the client to send the authorization request parameters in an HTTP POST body instead of URL query string.",
+        desc: "Allows the client to send the authorization request parameters in an HTTP POST body instead of URL query string. Epic allows this for EHR launches only, not standalone launches.",
         epic: true,
         oracle: true
       },
@@ -1246,7 +1246,7 @@
       { term: "Bearer", category: "Tokens", def: "An HTTP Authorization scheme (RFC 6750). The header 'Authorization: Bearer <access_token>' tells the FHIR server to grant access to 'whoever bears (carries) this token'. Always requires HTTPS." },
       { term: "opaque token", category: "Tokens", def: "An access_token that is a random, server-side reference string (e.g. 'st_live_99a8b7c6...') with no readable payload. The FHIR server must call the introspection_endpoint to validate it. Contrast with JWT." },
       // ── OAuth Parameters & Claims ──────────────────────────────────────────
-      { term: "aud", category: "OAuth / Claims", def: "Audience. In authorization requests, the aud parameter specifies the target FHIR server URL the access_token should be scoped to. In JWT payloads, the aud claim identifies which system(s) should accept this token." },
+      { term: "aud", category: "OAuth / Claims", def: "Audience. In authorization requests, the aud parameter specifies the target FHIR server URL the access_token should be scoped to. In JWT payloads, the aud claim identifies which system(s) should accept this token. Epic has required aud since its May 2023 version; for standalone launches, only when launch/patient or launch/encounter is requested." },
       { term: "code_challenge", category: "OAuth / Claims", def: "The hashed, public half of the PKCE pair. Computed as BASE64URL(SHA256(code_verifier)) and sent with the authorization request. Safe to transmit in the URL because SHA-256 is a one-way function." },
       { term: "code_verifier", category: "OAuth / Claims", def: "The secret, random string (43–128 chars) generated by the app before the authorization request. Kept in app memory and sent to the token_endpoint. The server hashes it to verify it matches the earlier code_challenge." },
       { term: "grant_type", category: "OAuth / Claims", def: "Specifies which OAuth 2.0 workflow is being used in a token request. SMART supports: authorization_code (user-facing flows), refresh_token (renewal), and client_credentials (backend services)." },
@@ -1309,6 +1309,51 @@
       { term: "EHR Launch", category: "Launch Workflows", def: "Launch workflow initiated from inside the EHR. The EHR opens the app's launch URL with ?iss= (FHIR base) and ?launch= (opaque context token). Patient/encounter context is established without additional user selection." },
       { term: "Standalone Launch", category: "Launch Workflows", def: "Launch workflow where the app starts independently on a device or browser outside the EHR. The app requests launch/patient scope, causing the authorization server to present a patient-picker to the user." },
       { term: "backend service", category: "Launch Workflows", def: "A server-to-server SMART workflow using client_credentials grant. No browser, no user sign-in. The backend app authenticates with a signed JWT (private_key_jwt) and receives a system-scoped access_token for bulk queries." },
+      // ── Plain-Language Basics ──────────────────────────────────────────────
+      { term: "Sandbox", category: "Plain-Language Basics", def: "A practice copy of a system filled with fake patients, so developers and learners can test safely without touching real health records. Epic, Oracle Health and the SMART launcher all offer one." },
+      { term: "Synthetic data", category: "Plain-Language Basics", def: "Made-up patient records that look realistic but belong to no real person. Sandboxes use them so nobody's privacy is at risk." },
+      { term: "Server", category: "Plain-Language Basics", def: "A computer that stores data or does work and answers requests sent over the internet. In this lab, the authorization server (sign-in and tokens) and the FHIR server (health records) are two different servers." },
+      { term: "Client", category: "Plain-Language Basics", def: "The program asking for something. In OAuth the client is the app, such as John's graphing app, not the person using it." },
+      { term: "Endpoint", category: "Plain-Language Basics", def: "A specific web address on a server that does one job, such as the authorization_endpoint (where the user signs in) or the token_endpoint (where the app collects its tokens)." },
+      { term: "Base URL", category: "Plain-Language Basics", def: "The starting web address of a FHIR server, such as https://api.mock.health/fhir. Other addresses are built by adding to the end of it, like /Observation or /.well-known/smart-configuration." },
+      { term: "Request and response", category: "Plain-Language Basics", def: "A request is a message an app sends to a server, such as 'give me Eleanor's lab results'. The response is the server's reply: a status code, and usually some data." },
+      { term: "Status code", category: "Plain-Language Basics", def: "The three-digit number at the start of every web response. 200 means success, 202 means accepted and still working, 302 means 'go to this other address', 400 means the request was malformed, 401 means not signed in or a bad token, 403 means not allowed." },
+      { term: "Header", category: "Plain-Language Basics", def: "Extra labelled information sent with a web request or response, separate from the main content. The access token travels in the Authorization header." },
+      { term: "Query string", category: "Plain-Language Basics", def: "The part of a web address after the question mark, made of name=value pairs joined by &. The sign-in request sends scope, state and code_challenge this way." },
+      { term: "Redirect", category: "Plain-Language Basics", def: "When a server tells the browser to go to a different address. A SMART sign-in uses redirects to send the user to the sign-in page and then back to the app." },
+      { term: "Callback URL", category: "Plain-Language Basics", def: "The app's own address that the authorization server sends the browser back to after sign-in, carrying a one-time code. Also called the redirect_uri. It must be registered in advance." },
+      { term: "JSON", category: "Plain-Language Basics", def: "JavaScript Object Notation. A plain-text format for data made of names and values inside curly braces, such as {\"status\": \"final\"}. FHIR resources and the SMART discovery file are written in JSON." },
+      { term: "NDJSON", category: "Plain-Language Basics", def: "Newline-delimited JSON: a file where every line is one complete JSON record. Bulk data export delivers FHIR resources this way." },
+      { term: "Authentication", category: "Plain-Language Basics", def: "Proving who you are, for example by signing in with a password. The id_token is the result of authentication." },
+      { term: "Authorization", category: "Plain-Language Basics", def: "Deciding what someone is allowed to do or see. Scopes and the access_token are about authorization." },
+      { term: "Credential", category: "Plain-Language Basics", def: "Anything that proves identity or permission: a password, a client secret, a private key, or a token." },
+      { term: "Hash", category: "Plain-Language Basics", def: "A one-way scramble of data into a short, fixed-length fingerprint. The same input always gives the same hash, but the hash cannot be turned back into the input. PKCE relies on this." },
+      { term: "SHA-256", category: "Plain-Language Basics", def: "A widely used hash function that produces a 256-bit fingerprint. In PKCE, the code_challenge is the SHA-256 hash of the code_verifier." },
+      { term: "Base64URL", category: "Plain-Language Basics", def: "A way of writing computer data using only letters, digits, - and _, so it is safe inside a web address. PKCE challenges and the three parts of a JWT are written this way." },
+      { term: "Digital signature", category: "Plain-Language Basics", def: "A mathematical seal made with a private key. Anyone with the matching public key can check that the data came from the signer and was not changed. Servers sign id_tokens; backend apps sign their login assertions." },
+      { term: "Public and private keys", category: "Plain-Language Basics", def: "A matched pair of keys. The private key is kept secret and used to sign; the public key is shared openly (for example at a jwks_uri) and used to check those signatures." },
+      { term: "Client secret", category: "Plain-Language Basics", def: "A password issued to an app, not to a person, so the app can prove who it is at the token_endpoint. Only apps that can keep it hidden on their own server should use one." },
+      { term: "Confidential client", category: "Plain-Language Basics", def: "An app that runs on a server it controls, so it can keep a client secret or private key hidden. A public client (a phone app, or a web app running in the browser) cannot, so it relies on PKCE instead." },
+      { term: "Front channel and back channel", category: "Plain-Language Basics", def: "The front channel is messages carried through the user's browser by redirects, such as the sign-in request, which the user or malware could see. The back channel is direct calls from the app to a server, such as the POST to the token_endpoint." },
+      { term: "Reverse proxy", category: "Plain-Language Basics", def: "A gateway server that sits in front of other servers and forwards requests to them, often handling encryption (TLS) and security checks. In Watch the Flow it is the yellow dot on a message." },
+      { term: "Discovery document", category: "Plain-Language Basics", def: "The public settings file a SMART server publishes at /.well-known/smart-configuration, listing its addresses and the features it supports. An app reads it before anything else." },
+      { term: "Capability", category: "Plain-Language Basics", def: "A feature a SMART server says it supports, listed in its discovery document, such as launch-ehr or permission-v2." },
+      { term: "Resource", category: "Plain-Language Basics", def: "One kind of health record in FHIR, such as Patient, Observation or Condition. Each resource type has a defined set of fields." },
+      { term: "Implementation guide", category: "Plain-Language Basics", def: "A published set of rules that narrows a broad standard for a specific use. US Core and SMART App Launch are both implementation guides for FHIR." },
+      { term: "Profile", category: "Plain-Language Basics", def: "The rules in an implementation guide for one resource type: which fields must be present and which codes to use. Example: the US Core Laboratory Result Observation profile." },
+      { term: "Code system", category: "Plain-Language Basics", def: "A standard list of codes with agreed meanings, such as LOINC for lab tests or SNOMED CT for diagnoses. Using codes instead of free text lets different systems understand each other." },
+      { term: "Interoperability", category: "Plain-Language Basics", def: "Different systems being able to exchange data and use it without special effort. SMART on FHIR is one of the main tools for this in US healthcare." },
+      { term: "ONC", category: "Plain-Language Basics", def: "The Office of the National Coordinator for Health Information Technology, part of the US Department of Health and Human Services (renamed ASTP/ONC in 2024). It runs the certification program that requires EHRs to support SMART on FHIR." },
+      { term: "21st Century Cures Act", category: "Plain-Language Basics", def: "A 2016 US law that, among other things, required health records to be available through standard APIs 'without special effort' and made information blocking a violation." },
+      { term: "USCDI", category: "Plain-Language Basics", def: "United States Core Data for Interoperability: ONC's list of data elements, such as lab results, medications and allergies, that certified systems must be able to share." },
+      { term: "US Core", category: "Plain-Language Basics", def: "The HL7 implementation guide that defines how USCDI data is represented in FHIR, one profile per kind of data." },
+      { term: "Patient portal", category: "Plain-Language Basics", def: "A website or app where patients see their own records and message their care team. A Standalone Launch often signs the user in with their patient portal account." },
+      { term: "Caregiver access", category: "Plain-Language Basics", def: "Permission for one person, such as John, to see another person's records, such as his mother Eleanor's. The signed-in user (fhirUser) and the patient in context are then different people." },
+      { term: "Least privilege", category: "Plain-Language Basics", def: "Giving an app only the permissions it truly needs. John's graphing app should ask for .rs (read and search), not .cruds (which also allows creating, updating and deleting)." },
+      { term: "Consent screen", category: "Plain-Language Basics", def: "The page where the user reviews what an app is asking for and approves or denies it. What the user approves becomes the granted scopes." },
+      { term: "DevTools", category: "Plain-Language Basics", def: "The developer tools built into web browsers such as Chrome, Safari and Firefox. Their Network tab lists every request a page makes, which is how you watch a SMART launch happen." },
+      { term: "Replay attack", category: "Plain-Language Basics", def: "Reusing a captured message or token to repeat an action. One-time authorization codes, PKCE and refresh token rotation all help stop replays." },
+      { term: "Asynchronous request", category: "Plain-Language Basics", def: "A request the server accepts right away (202 Accepted) but finishes later, while the app checks back on a status address. Bulk data export works this way." },
     ];
 
     // FINAL ASSESSMENT QUIZ (10 QUESTIONS)
@@ -1658,7 +1703,7 @@
     // (only where the text is not already inside a button), glossary values
     // such as `aud` and the plain words S256 and PKCE also open their entry.
     const GLOSSARY_TERM_NAMES = new Set(GLOSSARY_TERMS.map((t) => t.term));
-    const LINKED_WORDS = /\b(S256|PKCE)\b/;
+    const LINKED_WORDS = /\b(S256|PKCE|[Ss]andbox(?:es)?)\b/;
     const rich = (text, link) => {
       if (typeof text !== "string") return text;
       if (!link && text.indexOf("`") === -1) return text;
@@ -1666,7 +1711,7 @@
         if (i % 2 === 0) {
           if (!link) return part;
           return part.split(LINKED_WORDS).map((bit, j) =>
-            j % 2 === 1 ? <Term key={i + "-" + j} t={bit}>{bit}</Term> : bit
+            j % 2 === 1 ? <Term key={i + "-" + j} t={/^sandbox/i.test(bit) ? "Sandbox" : bit}>{bit}</Term> : bit
           );
         }
         const code = <code key={i} className="code-inline">{part}</code>;
@@ -2262,7 +2307,8 @@
                   <ul className="space-y-3 text-slate-300 leading-relaxed">
                     <li><span className="font-semibold text-white">Dark boxes are code.</span> Real requests, responses and JSON, exactly as the computer sends and reads them.</li>
                     <li><span className="font-semibold text-white">Tinted text is an exact value,</span> like <code className="code-inline">patient/Observation.rs</code>. It is something you would type, or see in code.</li>
-                    <li><span className="font-semibold text-white">Dotted words open the glossary,</span> like <Term t="scope">scope</Term> or <Term t="PKCE">PKCE</Term>. The Glossary button at the top lists all 79 terms.</li>
+                    <li><span className="font-semibold text-white">New to the tech words?</span> The glossary&rsquo;s &ldquo;Plain-Language Basics&rdquo; category explains everyday terms like <Term t="Sandbox">sandbox</Term>, <Term t="Endpoint">endpoint</Term> and <Term t="Hash">hash</Term>.</li>
+                    <li><span className="font-semibold text-white">Dotted words open the glossary,</span> like <Term t="scope">scope</Term> or <Term t="PKCE">PKCE</Term>. The Glossary button at the top lists every term.</li>
                   </ul>
                 </aside>
               </section>
@@ -3944,10 +3990,10 @@
                 {/* 4-Stage Stepper Buttons */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2.5">
                   {[
-                    { stage: 1, title: "Phase 1: Launch & PKCE Setup", desc: "Epic Steps 0–1 • Discovery & S256", icon: Lock },
-                    { stage: 2, title: "Phase 2: GET /smart/authorize", desc: "Epic Steps 2–8 • Front-channel auth", icon: Globe },
-                    { stage: 3, title: "Phase 3: POST /smart/token", desc: "Epic Steps 9–11 • Code & Token anatomy", icon: Server },
-                    { stage: 4, title: "Phase 4: FHIR API & Refresh Flow", desc: "Epic Steps 12–18 • TTL Expiry & Renewal", icon: Database }
+                    { stage: 1, title: "Phase 1: Launch & PKCE Setup", desc: "Steps 0–1 • Discovery & S256", icon: Lock },
+                    { stage: 2, title: "Phase 2: GET /smart/authorize", desc: "Steps 2–8 • Front-channel auth", icon: Globe },
+                    { stage: 3, title: "Phase 3: POST /smart/token", desc: "Steps 9–11 • Code & Token anatomy", icon: Server },
+                    { stage: 4, title: "Phase 4: FHIR API & Refresh Flow", desc: "Steps 12–15, refresh 16–18 • Expiry & Renewal", icon: Database }
                   ].map((item) => {
                     const IconComponent = item.icon;
                     const isActive = simStage === item.stage;
@@ -4061,6 +4107,11 @@
                     <span>A yellow dot means the message passes through the Reverse Proxy, the secure (TLS) gateway in front of the servers.</span>
                   </li>
                   <li>Highlighted columns are the parties in the selected step.</li>
+                  <li>
+                    Steps 0&ndash;15 follow Epic&rsquo;s published standalone launch diagram; steps 16&ndash;18 (token refresh) are added by this lab.
+                    Epic&rsquo;s own EHR launch diagram is shorter, steps 0&ndash;11, because the clinician is already signed in and there is no browser sign-in.{" "}
+                    <a href="https://fhir.epic.com/Documentation?docId=oauth2tutorial&amp;section=testing-a-standalone-launch" className="text-sky-300 underline underline-offset-2 hover:text-sky-200" target="_blank" rel="noopener noreferrer">See Epic&rsquo;s diagrams</a>
+                  </li>
                 </ul>
 
                 <div className="overflow-x-auto">
@@ -4204,7 +4255,7 @@
                     <div className="space-y-5">
                       <div>
                         <span className="text-xs font-bold text-emerald-400">
-                          Phase 1 of 4 • Epic Steps 0–1 ({launchMode === "ehr" ? "EHR Launch" : "Standalone Launch"})
+                          Phase 1 of 4 • Steps 0–1 ({launchMode === "ehr" ? "EHR Launch" : "Standalone Launch"})
                         </span>
                         <h3 className="text-lg font-bold text-white mt-1">
                           {launchMode === "ehr"
@@ -4298,7 +4349,7 @@
                     <div className="space-y-5">
                       <div>
                         <span className="text-xs font-bold text-emerald-400">
-                          Phase 2 of 4 • Epic Steps 2–8 (Front-Channel User Sign-in)
+                          Phase 2 of 4 • Steps 2–8 (Front-Channel User Sign-in)
                         </span>
                         <h3 className="text-lg font-bold text-white mt-1">
                           Authorize URL Parameters, Login Flow & Code Issuance
@@ -4347,7 +4398,7 @@
 
                       <div className="p-4 rounded-xl bg-slate-950 border border-slate-800 space-y-3">
                         <div className="text-xs font-bold text-white">
-                          Simulate User Authentication & Consent (Epic Steps 4–8):
+                          Simulate User Authentication & Consent (Steps 4–8):
                         </div>
                         <p className="text-sm text-slate-400">
                           {launchMode === "ehr" ? (
@@ -4379,7 +4430,7 @@
                     <div className="space-y-5">
                       <div>
                         <span className="text-xs font-bold text-emerald-400">
-                          Phase 3 of 4 • Epic Steps 9–11 (Back-Channel <code className="code-inline">/smart/token</code> Exchange)
+                          Phase 3 of 4 • Steps 9–11 (Back-Channel <code className="code-inline">/smart/token</code> Exchange)
                         </span>
                         <h3 className="text-lg font-bold text-white mt-1">
                           PKCE Verification + Token Anatomy (<code className="code-inline">id_token</code> vs <code className="code-inline">access_token</code> vs Context)
@@ -4407,7 +4458,7 @@
                               <span>Legitimate App (<code className="code-inline">code_verifier</code> matches)</span>
                             </div>
                             <p className="text-sm text-slate-400 mt-1">
-                              S256(verifier) matches stored challenge at Epic Step 10.
+                              S256(verifier) matches stored challenge at Step 10.
                             </p>
                           </button>
 
@@ -4427,7 +4478,7 @@
                               <span>Simulate Attacker Wrong <code className="code-inline">code_verifier</code></span>
                             </div>
                             <p className="text-sm text-slate-400 mt-1">
-                              Fails at Epic Step 10 with <code className="code-inline">400 Bad Request (invalid_grant)</code>.
+                              Fails at Step 10 with <code className="code-inline">400 Bad Request (invalid_grant)</code>.
                             </p>
                           </button>
                         </div>
@@ -4437,7 +4488,7 @@
                           className="w-full py-2.5 rounded-xl bg-sky-500 hover:bg-sky-400 text-slate-950 font-bold text-xs flex items-center justify-center gap-2 transition shadow-sm"
                         >
                           <Send className="w-3.5 h-3.5" />
-                          <span>Execute POST /smart/token Exchange (Epic Steps 9–11)</span>
+                          <span>Execute POST /smart/token Exchange (Steps 9–11)</span>
                         </button>
                       </div>
 
@@ -4577,7 +4628,7 @@
                     <div className="space-y-5">
                       <div>
                         <span className="text-xs font-bold text-emerald-400">
-                          Phase 4 of 4 • Epic Steps 12–15 + Refresh Steps 16–18
+                          Phase 4 of 4 • Steps 12–15 + Refresh Steps 16–18
                         </span>
                         <h3 className="text-lg font-bold text-white mt-1">
                           Call FHIR API, Test Token Misuse & Simulate Refresh Token Renewal
@@ -4995,7 +5046,7 @@
                           ) : (
                             <>
                               <div className="text-emerald-400 font-bold">
-                                HTTP/1.1 302 Found (Epic Step 8 Redirect)
+                                HTTP/1.1 302 Found (Step 8 Redirect)
                               </div>
                               <div className="text-slate-300 break-all">
                                 Location: https://app.example.org/callback?code=<span className="text-amber-300 font-bold">{issuedAuthCode}</span>&amp;state=<span className="text-sky-300">{authUrlState}</span>
@@ -5018,7 +5069,7 @@
                           {tokenExchangeResult === "error" && (
                             <div className="space-y-2">
                               <div className="text-rose-400 font-bold">
-                                HTTP/1.1 400 Bad Request (Failed at Epic Step 10)
+                                HTTP/1.1 400 Bad Request (Failed at Step 10)
                               </div>
                               <pre className="code-island text-rose-300 whitespace-pre-wrap">
                                 {JSON.stringify(
@@ -5036,7 +5087,7 @@
                           {tokenExchangeResult === "success" && (
                             <div className="space-y-2">
                               <div className="text-emerald-400 font-bold">
-                                HTTP/1.1 200 OK (Epic Step 11 • {launchMode === "ehr" ? "EHR Launch Response" : "Standalone Response"})
+                                HTTP/1.1 200 OK (Step 11 • {launchMode === "ehr" ? "EHR Launch Response" : "Standalone Response"})
                               </div>
                               <pre className="code-island text-emerald-300 whitespace-pre-wrap overflow-x-auto">
                                 {JSON.stringify(
@@ -5107,7 +5158,7 @@
                           ) : tokenExpired ? (
                             <div className="space-y-1.5">
                               <div className="text-rose-400 font-bold">
-                                HTTP/1.1 401 Unauthorized (Failed at Epic Step 13 — Token Expired)
+                                HTTP/1.1 401 Unauthorized (Failed at Step 13 — Token Expired)
                               </div>
                               <div className="text-amber-300">
                                 WWW-Authenticate: Bearer error="invalid_token", error_description="The access token expired (exp claim is in the past)"
@@ -5182,7 +5233,7 @@
                           ) : (
                             <div className="space-y-1.5">
                               <div className="text-emerald-400 font-bold">
-                                HTTP/1.1 200 OK (Epic Step 14 • Generation #{tokenGeneration} Token Verified)
+                                HTTP/1.1 200 OK (Step 14 • Generation #{tokenGeneration} Token Verified)
                               </div>
                               <pre className="code-island text-emerald-300 whitespace-pre-wrap">
                                 {JSON.stringify(
@@ -5844,6 +5895,11 @@ const userResourceUrl = payload.fhirUser;
                       It advertises <Term t="S256">S256</Term> for PKCE, and capabilities such as <code className="code-inline">launch-ehr</code>, <code className="code-inline">launch-standalone</code> and <code className="code-inline">permission-v2</code>.
                       To practise the failures in &ldquo;Error scenarios&rdquo; below, the launcher&rsquo;s <span className="font-semibold text-white">Simulated Error</span> menu can force an invalid scope, an expired token and other errors.
                     </p>
+                    <p>
+                      Ready for a vendor sandbox? Epic&rsquo;s <a href="https://fhir.epic.com/Documentation?docId=oauth2tutorial&amp;section=testing-a-standalone-launch" className="text-sky-300 underline underline-offset-2 hover:text-sky-200" target="_blank" rel="noopener noreferrer">OAuth 2.0 tutorial</a> walks through registering a free app
+                      at fhir.epic.com and running a standalone launch against Epic&rsquo;s sandbox. A new client ID takes about 30 minutes to start working,
+                      and Epic says never to request the <code className="code-inline">launch</code> scope in a standalone launch.
+                    </p>
                   </div>
                 </Disclosure>
                 <Disclosure title="Compare real vendor sandboxes" summary={"Epic, Oracle Health and a mock server: which features each one advertises in its discovery file."}>
@@ -5895,7 +5951,7 @@ const userResourceUrl = payload.fhirUser;
                       </span>
                     </div>
                     <p className="text-sm text-slate-400">
-                      Standard SMART v2, EHR/standalone launches, private_key_jwt, OIDC SSO, and granular v2 scopes.
+                      EHR and standalone launches, SMART v1 and v2 scopes (v2 since Epic&rsquo;s November 2024 version), private_key_jwt keys, and OpenID Connect.
                     </p>
                     <div className="flex flex-wrap gap-1.5 pt-1">
                       {VENDOR_CAPABILITIES.epic.map((cap) => {
