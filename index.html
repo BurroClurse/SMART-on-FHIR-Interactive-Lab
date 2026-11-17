@@ -16,6 +16,7 @@
   <meta property="og:image:height" content="630" />
   <meta property="og:image:alt" content="SMART on FHIR Interactive Lab: how a health app finds a server, asks permission, and gets its tokens" />
   <meta name="twitter:card" content="summary_large_image" />
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E %3Cdefs%3E %3ClinearGradient id='bg' x1='0' y1='0' x2='1' y2='1'%3E %3Cstop offset='0' stop-color='%232b5d8f'/%3E %3Cstop offset='1' stop-color='%23132a44'/%3E %3C/linearGradient%3E %3ClinearGradient id='fl' x1='0' y1='0' x2='0' y2='1'%3E %3Cstop offset='0' stop-color='%23fbbf24'/%3E %3Cstop offset='1' stop-color='%23ea580c'/%3E %3C/linearGradient%3E %3C/defs%3E %3Crect width='64' height='64' rx='15' fill='url%28%23bg%29'/%3E %3Cpath fill='%23fffdf8' d='M32 8.5C35.5 15 43.5 19.5 43.5 28.5C43.5 32.6 41.3 36 38 37.8L40.5 52.5C40.7 53.8 39.8 55 38.5 55H25.5C24.2 55 23.3 53.8 23.5 52.5L26 37.8C22.7 36 20.5 32.6 20.5 28.5C20.5 23 23.6 19.6 26.4 16.2C26.8 19.8 28.3 22 30.4 23C29.6 18.2 30.2 12.8 32 8.5Z'/%3E %3Cpath fill='url%28%23fl%29' d='M32 20.5C34.2 24.3 37.6 26.6 37.6 30.8C37.6 34 35.1 36.4 32 36.4C28.9 36.4 26.4 34 26.4 30.8C26.4 28.2 28.1 26.6 29.4 24.6C29.9 26.6 30.8 27.6 32 28C31.4 25.4 31.4 22.8 32 20.5Z'/%3E %3C/svg%3E" data-lab-head />
   <link rel="preconnect" href="https://fonts.googleapis.com" data-lab-head />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin data-lab-head />
   <link href="https://fonts.googleapis.com/css2?family=Source+Sans+3:ital,wght@0,400;0,500;0,600;0,700;1,400&family=Source+Serif+4:opsz,wght@8..60,500;8..60,600;8..60,700&family=Source+Code+Pro:wght@400;500;600;700&display=swap" rel="stylesheet" data-lab-head />
@@ -160,7 +161,7 @@
     @keyframes slideIn { from { transform: translateX(24px); opacity: 0; } to { transform: none; opacity: 1; } }
 
     .json-scroll { scroll-behavior: smooth; }
-    #discovery-file, #guided-step { scroll-margin-top: 9rem; }
+    #discovery-file, #guided-step, details[id^="deeper-"] { scroll-margin-top: 9rem; }
     /* Sideways-scrolling rows (tabs, step numbers) without a visible scrollbar */
     .no-scrollbar { scrollbar-width: none; }
     .no-scrollbar::-webkit-scrollbar { display: none; }
@@ -173,6 +174,27 @@
     .json-key-row:hover { background: rgb(var(--slate-800) / 0.5); }
     .progress-bar { transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1); transform-origin: left; }
     .card-hover { transition: border-color 0.15s ease, box-shadow 0.15s ease; }
+
+    /* Anything that can be pressed looks raised, and sinks when pressed.
+       Glossary words, the section tabs and Show/Hide toggles stay flat. */
+    button:not(.term):not(.tab-btn):not(.btn-flat), .raised {
+      box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.35), 0 1px 2px rgb(21 18 14 / 0.14), 0 3px 6px -3px rgb(21 18 14 / 0.3);
+      transition-property: color, background-color, border-color, box-shadow, transform, opacity;
+      transition-duration: 0.15s;
+    }
+    button:not(.term):not(.tab-btn):not(.btn-flat):not([class*="bg-"]) {
+      background-color: rgb(var(--slate-900));
+      border: 1px solid rgb(var(--slate-700));
+    }
+    button:not(.term):not(.tab-btn):not(.btn-flat):not(:disabled):not(.cursor-not-allowed):hover, .raised:hover {
+      box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.35), 0 2px 4px rgb(21 18 14 / 0.16), 0 6px 12px -4px rgb(21 18 14 / 0.3);
+      transform: translateY(-1px);
+    }
+    button:not(.term):not(.tab-btn):not(.btn-flat):not(:disabled):not(.cursor-not-allowed):active, .raised:active {
+      box-shadow: inset 0 1px 3px rgb(21 18 14 / 0.25);
+      transform: translateY(1px);
+    }
+    button:not(.term):not(.tab-btn):not(.btn-flat):disabled, button.cursor-not-allowed { box-shadow: none; }
     .card-hover:hover { box-shadow: 0 4px 14px -6px rgb(var(--slate-50) / 0.18); }
 
     ::-webkit-scrollbar { width: 8px; height: 8px; }
@@ -352,6 +374,7 @@
     const CONCEPT_VIDEOS = [
       {
         id: 1,
+        deeper: ["real-launch", "uscdi"],
         number: "Concept Video 1",
         plain: ["Think of a FHIR server as a library of health records. Some are open to everyone: a public test server such as HAPI holds made-up patients, so any app can ask for data and get it straight back.", "A hospital's server holds real people's private records. If an app asks it for Eleanor's lab results without permission, the server answers `401 Unauthorized`, which means \"I don't know who you are.\"", "So being able to ask for data and being allowed to see it are two different things. SMART on FHIR is the shared set of rules for getting that permission. Every server that follows it publishes the same kind of settings file, so John's app can learn how to ask at any hospital."],
         title: "Why Apps Need Permission (Authorized Access)",
@@ -366,6 +389,7 @@
       },
       {
         id: 2,
+        deeper: ["wildcard", "granular"],
         number: "Concept Video 2",
         plain: ["When an app asks for permission, it lists exactly what it wants. Each item on that list is called a scope.", "A scope reads like a short sentence in three parts. `patient/Observation.rs` means: for the patient in this session (`patient/`), lab results and other measurements (`Observation`), read and search them (`.rs`).", "Apps should ask for as little as possible. John's app only draws a graph, so it asks for `.rs`. It never needs `.cruds`, which would also let it create, change and delete records.", "Three lists matter: what the server supports (in its settings file), what the app requests, and what is finally granted after John approves. A scope appearing in the server's list does not mean the app has it."],
         title: "Scopes Define Permissions (Requested vs. Granted)",
@@ -380,6 +404,7 @@
       },
       {
         id: 3,
+        deeper: ["devtools", "mistakes"],
         number: "Concept Video 3",
         plain: ["Getting permission happens in two moves. First the app sends John's browser to the hospital's sign-in page. John signs in and approves, and the browser returns to the app carrying a one-time code.", "Then the app trades that code for tokens, directly with the server. PKCE protects the trade: at the start, the app sent a scrambled fingerprint of a secret; now it shows the secret itself. Someone who stole the code still cannot use it without that secret.", "The app gets back several pieces, each with one job. The access token is the key it shows the FHIR server to get data. The ID token says who signed in: John. The patient context says whose records these are: Eleanor's."],
         title: "Behind the Scenes: OAuth 2.0, PKCE & Token Jobs",
@@ -395,6 +420,7 @@
       },
       {
         id: 4,
+        deeper: ["vendors", "backend", "bulk"],
         number: "Concept Video 4",
         plain: ["Real systems from Epic and Oracle Health follow the same pattern you have just seen. What changes is where the connection starts.", "In a standalone launch, the app starts on its own, like John opening an app on his phone. He signs in and picks whose records to connect.", "In an EHR launch, the app starts inside the hospital's record system. A clinician already has a chart open, so the EHR hands the app a launch token and the patient is known without asking.", "A backend service has no person signing in at all. One server talks to another and proves who it is with a signed key, for jobs such as nightly reports.", "Two different files describe a server: `/metadata` lists what health data it holds, and `/.well-known/smart-configuration` lists how to get permission."],
         title: "Real-World Flowcharts: Epic, Oracle Health & Launch Patterns",
@@ -414,8 +440,8 @@
       {
         id: 1,
         taskBadge: "Part 1: Discovery • Step 1",
-        title: "Open the SMART Discovery Document",
-        subtitle: "Seeing what an app reads before it connects",
+        title: "Read the Server's Settings File",
+        subtitle: "The file beside these steps is the first thing an app reads",
         videoRef: "Authorized Access & Discovery",
         videoTakeaway: "Authorized access: An app's ability to request FHIR data does not automatically give it permission to access that data. It first reads this public SMART discovery roadmap.",
         highlightKeys: ["issuer", "authorization_endpoint", "token_endpoint"],
@@ -443,6 +469,7 @@
       },
       {
         id: 4,
+        deeper: ["backend", "vendors"],
         taskBadge: "Part 1: Discovery • Step 4",
         title: "Workflow, PKCE & Grant Types",
         subtitle: "Launch capabilities, S256 PKCE challenges, and token grant options",
@@ -457,6 +484,7 @@
       },
       {
         id: 5,
+        deeper: ["real-launch"],
         taskBadge: "Part 1: Discovery • Step 5",
         title: "Recognize What You Have Received",
         subtitle: "Configuration metadata vs. Patient Data & CapabilityStatement",
@@ -467,6 +495,7 @@
       },
       {
         id: 6,
+        deeper: ["wildcard"],
         taskBadge: "Part 2: Scopes & Context • Step 6",
         title: "Explore scopes_supported",
         subtitle: "Understanding the server's advertised permission array",
@@ -483,6 +512,7 @@
       },
       {
         id: 7,
+        deeper: ["granular"],
         taskBadge: "Part 2: Scopes & Context • Step 7",
         title: "Decode patient/Observation.rs",
         subtitle: "Reading a SMART v2 scope from left to right",
@@ -493,6 +523,7 @@
       },
       {
         id: 8,
+        deeper: ["wildcard"],
         taskBadge: "Part 2: Scopes & Context • Step 8",
         title: "Compare .rs vs .cruds (Least Privilege)",
         subtitle: "Choosing the right permissions for John's graphing app",
@@ -503,6 +534,7 @@
       },
       {
         id: 9,
+        deeper: ["mistakes"],
         taskBadge: "Part 2: Scopes & Context • Step 9",
         title: "Distinguish User Identity from Patient Context",
         subtitle: "Caregiver scenario: John signs in to manage his mother's care",
@@ -518,6 +550,7 @@
       },
       {
         id: 10,
+        deeper: ["errors"],
         taskBadge: "Part 2: Scopes & Context • Step 10",
         title: "Separate Supported, Requested & Granted Access",
         subtitle: "Why seeing a scope in JSON doesn't mean your app has it",
@@ -1733,6 +1766,26 @@
 
     const GlossaryContext = React.createContext(() => {});
 
+    // The lab's mark: a keyhole (permission) whose top is a flame (FHIR, said "fire").
+    // Same drawing as the favicon in <head> and the share image.
+    const LabMark = ({ className }) => (
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" className={className} aria-hidden="true">
+        <defs>
+          <linearGradient id="labmark-bg" x1="0" y1="0" x2="1" y2="1">
+            <stop offset="0" stopColor="#2b5d8f" />
+            <stop offset="1" stopColor="#132a44" />
+          </linearGradient>
+          <linearGradient id="labmark-flame" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0" stopColor="#fbbf24" />
+            <stop offset="1" stopColor="#ea580c" />
+          </linearGradient>
+        </defs>
+        <rect width="64" height="64" rx="15" fill="url(#labmark-bg)" />
+        <path fill="#fffdf8" d="M32 8.5C35.5 15 43.5 19.5 43.5 28.5C43.5 32.6 41.3 36 38 37.8L40.5 52.5C40.7 53.8 39.8 55 38.5 55H25.5C24.2 55 23.3 53.8 23.5 52.5L26 37.8C22.7 36 20.5 32.6 20.5 28.5C20.5 23 23.6 19.6 26.4 16.2C26.8 19.8 28.3 22 30.4 23C29.6 18.2 30.2 12.8 32 8.5Z" />
+        <path fill="url(#labmark-flame)" d="M32 20.5C34.2 24.3 37.6 26.6 37.6 30.8C37.6 34 35.1 36.4 32 36.4C28.9 36.4 26.4 34 26.4 30.8C26.4 28.2 28.1 26.6 29.4 24.6C29.9 26.6 30.8 27.6 32 28C31.4 25.4 31.4 22.8 32 20.5Z" />
+      </svg>
+    );
+
     // A word in running text that opens its glossary entry.
     const Term = ({ t, children }) => {
       const openTerm = useContext(GlossaryContext);
@@ -1744,8 +1797,8 @@
     };
 
     // A collapsed reference section with a plain-language summary.
-    const Disclosure = ({ title, summary, children }) => (
-      <details className="disclosure border-t border-slate-700">
+    const Disclosure = ({ id, title, summary, children }) => (
+      <details id={id ? "deeper-" + id : undefined} className="disclosure border-t border-slate-700">
         <summary className="flex items-start justify-between gap-6 py-5 cursor-pointer">
           <span className="min-w-0">
             <span className="block font-head text-xl font-semibold text-white">{title}</span>
@@ -1774,12 +1827,42 @@
       );
     };
 
+    // Go Deeper sections that other tabs link to, by id.
+    const DEEPER_SECTIONS = {
+      "real-launch": "Try a real SMART launch",
+      vendors: "Compare real vendor sandboxes",
+      wildcard: "Wildcard scopes vs. specific scopes",
+      granular: "Granular scopes",
+      uscdi: "USCDI and US Core",
+      mistakes: "Seven common developer mistakes",
+      devtools: "Debug with browser DevTools",
+      backend: "Backend services",
+      bulk: "Bulk data export",
+      errors: "Error scenarios and fixes"
+    };
+    const DeeperContext = React.createContext(() => {});
+
+    // A row of links that open the matching Go Deeper sections.
+    const DeeperLinks = ({ ids }) => {
+      const openDeeper = useContext(DeeperContext);
+      return (
+        <div className="flex flex-wrap items-center gap-2 text-sm">
+          <span className="font-semibold text-slate-400">Go deeper:</span>
+          {ids.map((id) => (
+            <button key={id} type="button" onClick={() => openDeeper(id)} className="px-2.5 py-1 rounded-lg font-semibold text-sky-300 hover:text-sky-200">
+              {DEEPER_SECTIONS[id]} &rarr;
+            </button>
+          ))}
+        </div>
+      );
+    };
+
     const TABS = [
-      { id: "concepts", label: "Start Here" },
-      { id: "walkthrough", label: "Guided Lab" },
-      { id: "simulator", label: "Watch the Flow" },
-      { id: "tokens", label: "Tokens" },
-      { id: "deeper", label: "Go Deeper" }
+      { id: "concepts", label: "Start Here", slug: "start-here" },
+      { id: "walkthrough", label: "Guided Lab", slug: "guided-lab" },
+      { id: "simulator", label: "Watch the Flow", slug: "watch-the-flow" },
+      { id: "tokens", label: "Tokens", slug: "tokens" },
+      { id: "deeper", label: "Go Deeper", slug: "go-deeper" }
     ];
 
     // Progress is saved in this browser only, so a refresh or a return visit
@@ -1814,7 +1897,16 @@
 
     function App() {
       // TAB SELECTION: initial activeTab is "concepts" (learning progression: simple -> complex)
-      const [activeTab, setActiveTab] = usePersistentState("tab", "concepts", (v) => TABS.some((t) => t.id === v));
+      const [activeTab, setActiveTabRaw] = usePersistentState("tab", "concepts", (v) => TABS.some((t) => t.id === v));
+      // Remember where the page was scrolled, so Back returns to the same spot.
+      const setActiveTab = (id) => {
+        try {
+          if (window.history.state && window.history.state.tab) {
+            window.history.replaceState({ ...window.history.state, scrollY: window.scrollY }, "");
+          }
+        } catch (e) {}
+        setActiveTabRaw(id);
+      };
       const [selectedVideoId, setSelectedVideoId] = usePersistentState("video", 1, (v) => CONCEPT_VIDEOS.some((c) => c.id === v));
       const [selectedFlowchartType, setSelectedFlowchartType] = useState("standalone");
       const [sandboxComparisonMode, setSandboxComparisonMode] = useState("hapi");
@@ -2045,9 +2137,79 @@
         window.scrollTo({ top: 0, behavior: "smooth" });
       }, [currentStepIndex]);
 
+      // Each tab is its own entry in the browser history, so Back returns to
+      // the previous tab instead of leaving the lab. The address shows the tab
+      // (#guided-lab), so a link can open the lab on a given tab.
+      const activeTabRef = useRef(activeTab);
+      activeTabRef.current = activeTab;
+      const fromHistoryRef = useRef(false);
+      const restoreScrollRef = useRef(null);
       useEffect(() => {
+        if ("scrollRestoration" in window.history) window.history.scrollRestoration = "manual";
+        const fromHash = TABS.find((t) => "#" + t.slug === window.location.hash);
+        if (fromHash && fromHash.id !== activeTabRef.current) {
+          fromHistoryRef.current = true;
+          setActiveTabRaw(fromHash.id);
+        }
+        const onPop = (e) => {
+          const tab = e.state && e.state.tab;
+          if (!TABS.some((t) => t.id === tab) || tab === activeTabRef.current) return;
+          fromHistoryRef.current = true;
+          restoreScrollRef.current = e.state.scrollY || 0;
+          activeTabRef.current = tab; // so the hashchange that follows is a no-op
+          setActiveTabRaw(tab);
+        };
+        // An address typed or linked to directly, such as #tokens
+        const onHash = () => {
+          const t = TABS.find((x) => "#" + x.slug === window.location.hash);
+          if (!t || t.id === activeTabRef.current) return;
+          fromHistoryRef.current = true;
+          try { window.history.replaceState({ tab: t.id, scrollY: 0 }, ""); } catch (e) {}
+          activeTabRef.current = t.id;
+          setActiveTabRaw(t.id);
+        };
+        window.addEventListener("popstate", onPop);
+        window.addEventListener("hashchange", onHash);
+        return () => {
+          window.removeEventListener("popstate", onPop);
+          window.removeEventListener("hashchange", onHash);
+        };
+      }, []);
+      useEffect(() => {
+        try {
+          const url = "#" + TABS.find((t) => t.id === activeTab).slug;
+          const state = window.history.state;
+          if (fromHistoryRef.current) {
+            fromHistoryRef.current = false;
+          } else if (!state || !state.tab) {
+            window.history.replaceState({ tab: activeTab, scrollY: 0 }, "", url);
+          } else if (state.tab !== activeTab) {
+            window.history.pushState({ tab: activeTab, scrollY: 0 }, "", url);
+          }
+        } catch (e) {}
+        if (restoreScrollRef.current !== null) {
+          const y = restoreScrollRef.current;
+          restoreScrollRef.current = null;
+          requestAnimationFrame(() => window.scrollTo(0, y));
+          return;
+        }
         window.scrollTo({ top: 0, behavior: "smooth" });
       }, [activeTab]);
+
+      // Go Deeper links from other tabs: switch tab, open the section, scroll to it.
+      const [pendingDeeper, setPendingDeeper] = useState(null);
+      const openDeeper = (id) => {
+        setPendingDeeper(id);
+        setActiveTab("deeper");
+      };
+      useEffect(() => {
+        if (activeTab !== "deeper" || !pendingDeeper) return;
+        const el = document.getElementById("deeper-" + pendingDeeper);
+        setPendingDeeper(null);
+        if (!el) return;
+        el.open = true;
+        setTimeout(() => el.scrollIntoView({ behavior: "smooth", block: "start" }), 60);
+      }, [activeTab, pendingDeeper]);
 
       const goToStep = (idx) => {
         setLabOverview(false);
@@ -2219,15 +2381,14 @@
 
       return (
         <GlossaryContext.Provider value={openTerm}>
+        <DeeperContext.Provider value={openDeeper}>
         <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col font-sans">
           {/* Top Header & Navigation */}
           <header className="border-b border-slate-700 bg-slate-900 sticky top-0 z-30">
             <div className="max-w-7xl mx-auto px-4 sm:px-6 pt-3 sm:pt-4 flex flex-col gap-2 sm:gap-3">
               <div className="flex items-center justify-between gap-4">
                 <div className="flex items-center gap-3 min-w-0">
-                  <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-lg bg-indigo-600 flex items-center justify-center shrink-0" aria-hidden="true">
-                    <ShieldCheck className="w-5 h-5 text-white" />
-                  </div>
+                  <LabMark className="w-8 h-8 sm:w-9 sm:h-9 shrink-0" />
                   <div className="min-w-0">
                     <h1 className="font-head text-lg sm:text-2xl font-semibold text-white leading-tight">
                       SMART on FHIR Interactive Lab
@@ -2344,7 +2505,7 @@
                     and this lab walks through it one piece at a time.
                   </p>
                   <h3 className="text-lg font-semibold text-white pt-2">A suggested path</h3>
-                  <ol className="space-y-1">
+                  <ol className="space-y-2">
                     {[
                       { id: "concepts", text: "Read the four core concepts below. Each has a short video and a hands-on demo." },
                       { id: "walkthrough", text: "Work through ten steps on a real server\u2019s settings file, with a quick check after each one." },
@@ -2356,7 +2517,7 @@
                         <button
                           type="button"
                           onClick={() => setActiveTab(item.id)}
-                          className="w-full text-left flex gap-3 items-baseline rounded-lg px-3 py-2 -mx-3 hover:bg-slate-800/60 transition"
+                          className="w-full text-left flex gap-3 items-baseline rounded-lg px-3 py-2 bg-slate-900 border border-slate-700 hover:bg-slate-800/60"
                         >
                           <span className="tabular-nums font-semibold text-sky-300 w-4 shrink-0">{i + 1}</span>
                           <span>
@@ -2378,8 +2539,7 @@
                   <ul className="space-y-3 text-slate-300 leading-relaxed">
                     <li><span className="font-semibold text-white">Dark boxes are code.</span> Real requests, responses and JSON, exactly as the computer sends and reads them.</li>
                     <li><span className="font-semibold text-white">Tinted text is an exact value,</span> like <code className="code-inline">patient/Observation.rs</code>. It is something you would type, or see in code.</li>
-                    <li><span className="font-semibold text-white">New to the tech words?</span> The glossary&rsquo;s &ldquo;Plain-Language Basics&rdquo; category explains everyday terms like <Term t="Sandbox">sandbox</Term>, <Term t="Endpoint">endpoint</Term> and <Term t="Hash">hash</Term>.</li>
-                    <li><span className="font-semibold text-white">Dotted words open the glossary,</span> like <Term t="scope">scope</Term> or <Term t="PKCE">PKCE</Term>. The Glossary button at the top lists every term.</li>
+                    <li><span className="font-semibold text-white">Dotted words open the glossary,</span> like <Term t="scope">scope</Term> or <Term t="PKCE">PKCE</Term>. The Glossary button at the top lists every term; &ldquo;Plain-Language Basics&rdquo; covers everyday ones like <Term t="Sandbox">sandbox</Term> and <Term t="Endpoint">endpoint</Term>.</li>
                   </ul>
                 </aside>
               </section>
@@ -2526,6 +2686,8 @@
                         <p className="text-sm text-slate-400 leading-relaxed">
                           <span className="font-semibold text-slate-300">In the video: </span>{rich(activeVideo.summary)}
                         </p>
+
+                        {activeVideo.deeper && <DeeperLinks ids={activeVideo.deeper} />}
                       </div>
 
                       <div className="pt-4 border-t border-slate-800 flex items-center justify-between">
@@ -2896,7 +3058,7 @@
                     <section className="space-y-3">
                       <h3 className="text-lg font-semibold text-white">The ten steps</h3>
                       {Array.from(new Set(LAB_STEPS.map((s) => s.taskBadge.split(" \u2022 ")[0]))).map((part) => (
-                        <div key={part} className="space-y-1">
+                        <div key={part} className="space-y-2">
                           <div className="text-sm font-semibold text-slate-400">{part}</div>
                           {LAB_STEPS.map((step, idx) => ({ step, idx }))
                             .filter(({ step }) => step.taskBadge.split(" \u2022 ")[0] === part)
@@ -2905,7 +3067,7 @@
                                 key={step.id}
                                 type="button"
                                 onClick={() => goToStep(idx)}
-                                className="w-full text-left flex gap-3 items-baseline rounded-lg px-3 py-2 -mx-3 hover:bg-slate-800/60 transition"
+                                className="w-full text-left flex gap-3 items-baseline rounded-lg px-3 py-2 bg-slate-900 border border-slate-700 hover:bg-slate-800/60"
                               >
                                 <span className="tabular-nums font-semibold text-sky-300 w-5 shrink-0">{step.id}</span>
                                 <span className="min-w-0">
@@ -2963,7 +3125,7 @@
                         </div>
                         <button
                           onClick={() => setActiveTab("concepts")}
-                          className="text-xs font-semibold text-indigo-300 hover:text-white shrink-0 underline"
+                          className="px-2.5 py-1 rounded-lg text-xs font-semibold text-indigo-300 hover:text-white shrink-0"
                         >
                           Read the concept →
                         </button>
@@ -2975,7 +3137,7 @@
                   {currentStep.id === 1 && (
                     <div className="space-y-4 text-sm text-slate-300 leading-relaxed">
                       <p>
-                        When a SMART on FHIR app prepares to connect to a healthcare server, the very first thing it reads is the <strong>SMART Discovery Document</strong> (shown in the live JSON Inspector on the right).
+                        Before an app connects to a health server, it reads the server&rsquo;s settings file, shown <span className="hidden lg:inline">on the right</span><span className="lg:hidden">below these steps</span>. Its formal name is the <Term t="Discovery document">SMART Discovery Document</Term>; you do not need to open it anywhere.
                       </p>
                       <div className="p-4 rounded-xl bg-slate-950 border border-slate-800 space-y-3">
                         <div className="flex items-center justify-between">
@@ -3042,7 +3204,7 @@
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
                         <div
                           onClick={() => setSelectedJsonKey("authorization_endpoint")}
-                          className="p-3.5 rounded-xl bg-slate-950 border border-sky-500/40 cursor-pointer hover:border-sky-400 transition space-y-1.5"
+                          className="p-3.5 rounded-xl bg-slate-950 border border-sky-500/40 cursor-pointer raised hover:border-sky-400 transition space-y-1.5"
                         >
                           <div className="font-mono font-bold text-sky-300">
                             1. authorization_endpoint
@@ -3056,7 +3218,7 @@
                         </div>
                         <div
                           onClick={() => setSelectedJsonKey("token_endpoint")}
-                          className="p-3.5 rounded-xl bg-slate-950 border border-indigo-500/40 cursor-pointer hover:border-indigo-400 transition space-y-1.5"
+                          className="p-3.5 rounded-xl bg-slate-950 border border-indigo-500/40 cursor-pointer raised hover:border-indigo-400 transition space-y-1.5"
                         >
                           <div className="font-mono font-bold text-indigo-300">
                             2. token_endpoint
@@ -3695,7 +3857,7 @@
                           <div className="flex items-center justify-between pt-2 border-t border-slate-800">
                             <button
                               onClick={() => setQuizActive(false)}
-                              className="text-xs text-slate-400 hover:text-white"
+                              className="px-2.5 py-1 rounded-lg text-xs text-slate-400 hover:text-white"
                             >
                               Exit Quiz
                             </button>
@@ -3802,6 +3964,10 @@
                 </div>
                 )}
 
+                {!labOverview && currentStep.deeper && (
+                  <div className="pt-6"><DeeperLinks ids={currentStep.deeper} /></div>
+                )}
+
                 {/* Step Navigation Bar */}
                 <div className="pt-6 mt-6 border-t border-slate-800 flex items-center justify-between gap-2">
                   <button
@@ -3878,7 +4044,7 @@
                     {jsonSearch && (
                       <button
                         onClick={() => setJsonSearch("")}
-                        className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white"
+                        className="btn-flat absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white"
                       >
                         <X className="w-3.5 h-3.5" />
                       </button>
@@ -3947,7 +4113,7 @@
                                         e.stopPropagation();
                                         setShowAllScopesInJson(!showAllScopesInJson);
                                       }}
-                                      className="text-xs font-sans px-2 py-0.5 rounded bg-slate-800 text-sky-300 hover:bg-slate-700"
+                                      className="btn-flat text-xs font-sans px-2 py-0.5 rounded bg-slate-800 text-sky-300 hover:bg-slate-700"
                                     >
                                       {showAllScopesInJson
                                         ? "Show Key Lab Scopes (15)"
@@ -3995,15 +4161,25 @@
           {/* WATCH THE FLOW: launch, PKCE and token simulator */}
           {activeTab === "simulator" && (
             <main role="tabpanel" id="panel-simulator" aria-labelledby="tab-simulator" className="tab-panel max-w-7xl w-full mx-auto flex-1 flex flex-col gap-8 p-4 sm:p-6">
+              <div className="space-y-3 pt-2">
+                <h2 className="text-2xl sm:text-3xl font-semibold text-white">Watch the whole sign-in, one message at a time</h2>
+                <p className="text-slate-300 max-w-prose leading-relaxed">
+                  The Guided Lab showed what the server publishes. This tab plays what happens when John connects his app to Eleanor&rsquo;s records: nineteen messages between six parties, from opening the app to reading her lab results.
+                </p>
+                <ol className="space-y-1 list-decimal pl-5 marker:text-slate-500 text-slate-300 leading-relaxed max-w-prose">
+                  <li><span className="font-semibold text-white">Pick a launch type.</span> Standalone: John starts in his app. EHR: a clinician starts inside the hospital&rsquo;s system.</li>
+                  <li><span className="font-semibold text-white">Step through the four phases.</span> Each one lights up its messages in the diagram and shows the exact request and response.</li>
+                  <li><span className="font-semibold text-white">Try to break it.</span> Tamper with PKCE, let the token expire, or send the wrong token, and see what the server says.</li>
+                </ol>
+              </div>
+
               {/* Mode Switcher & Stepper Controls */}
               <div className="bg-slate-900/80 border border-slate-800 rounded-2xl p-4 sm:p-5 shadow-sm space-y-4">
                 <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 pb-4 border-b border-slate-800">
                   <div>
-                    <h2 className="text-lg sm:text-xl font-bold text-white">
-                      SMART on FHIR Launch, PKCE & Refresh Token Simulator
-                    </h2>
+                    <h3 className="text-lg sm:text-xl font-semibold text-white">Launch type</h3>
                     <p className="text-sm text-slate-400">
-                      Toggle between <strong>Standalone Launch</strong> and <strong>EHR Launch</strong> to compare how <code className="code-inline text-sky-300">launch</code> tokens, <code className="code-inline text-indigo-300">id_token</code> claims, and <code className="code-inline text-emerald-300">need_patient_banner</code> behave—and test <strong>Access Token Expiration & Refresh Token Renewal</strong>.
+                      Switching changes the tokens and patient context in every phase below.
                     </p>
                   </div>
 
@@ -4063,7 +4239,7 @@
                     </div>
                     <button
                       onClick={() => setShowLaunchDiffModal(!showLaunchDiffModal)}
-                      className="text-xs text-sky-400 hover:underline font-semibold"
+                      className="btn-flat text-xs text-sky-400 hover:underline font-semibold"
                     >
                       {showLaunchDiffModal ? "Hide Comparison Table" : "Show Comparison Table"}
                     </button>
@@ -4073,7 +4249,7 @@
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs">
                       <div
                         onClick={() => handleSwitchLaunchMode("standalone")}
-                        className={`p-3 rounded-xl border cursor-pointer transition ${
+                        className={`p-3 rounded-xl border cursor-pointer raised transition ${
                           launchMode === "standalone"
                             ? "bg-sky-950/30 border-sky-500/50"
                             : "bg-slate-900/50 border-slate-800 opacity-75 hover:opacity-100"
@@ -4100,7 +4276,7 @@
 
                       <div
                         onClick={() => handleSwitchLaunchMode("ehr")}
-                        className={`p-3 rounded-xl border cursor-pointer transition ${
+                        className={`p-3 rounded-xl border cursor-pointer raised transition ${
                           launchMode === "ehr"
                             ? "bg-indigo-950/30 border-indigo-500/50"
                             : "bg-slate-900/50 border-slate-800 opacity-75 hover:opacity-100"
@@ -4243,16 +4419,15 @@
                 {/* How to read the diagram */}
                 <OpenOnDesktop summary="How to read this diagram">
                 <ul className="grid gap-2 lg:grid-cols-2 text-sm text-slate-400 leading-relaxed">
-                  <li>Each row is one message. The line runs from the sender&rsquo;s column to the receiver&rsquo;s, and the arrowhead points at the receiver.</li>
+                  <li>Each row is one message; the arrow points at the receiver.</li>
                   <li className="flex items-start gap-2">
                     <span className="mt-1.5 w-3 h-3 rounded-full bg-amber-400 border border-slate-50/40 shrink-0" aria-hidden="true" />
-                    <span>A yellow dot means the message passes through the Reverse Proxy, the secure (TLS) gateway in front of the servers.</span>
+                    <span>Yellow dot: passes through the Reverse Proxy (the secure gateway).</span>
                   </li>
-                  <li>Highlighted columns are the parties in the selected step.</li>
+                  <li>Highlighted columns: the parties in this step.</li>
                   <li>
-                    Steps 0&ndash;15 follow Epic&rsquo;s published standalone launch diagram; steps 16&ndash;18 (token refresh) are added by this lab.
-                    Epic&rsquo;s own EHR launch diagram is shorter, steps 0&ndash;11, because the clinician is already signed in and there is no browser sign-in.{" "}
-                    <a href="https://fhir.epic.com/Documentation?docId=oauth2tutorial&amp;section=testing-a-standalone-launch" className="text-sky-300 underline underline-offset-2 hover:text-sky-200" target="_blank" rel="noopener noreferrer">See Epic&rsquo;s diagrams</a>
+                    Steps 0&ndash;15 follow Epic&rsquo;s standalone diagram; 16&ndash;18 (refresh) are added here. Epic&rsquo;s EHR diagram stops at 11: the clinician is already signed in.{" "}
+                    <a href="https://fhir.epic.com/Documentation?docId=oauth2tutorial&amp;section=testing-a-standalone-launch" className="text-sky-300 underline underline-offset-2 hover:text-sky-200" target="_blank" rel="noopener noreferrer">Epic&rsquo;s diagrams</a>
                   </li>
                 </ul>
                 </OpenOnDesktop>
@@ -4425,7 +4600,7 @@
                           </span>
                           <button
                             onClick={regeneratePkce}
-                            className="text-xs text-sky-400 hover:text-sky-300 flex items-center gap-1 font-medium"
+                            className="px-2.5 py-1 rounded-lg text-xs text-sky-400 hover:text-sky-300 flex items-center gap-1 font-medium"
                           >
                             <RefreshCw className="w-3 h-3" /> Roll New Secret
                           </button>
@@ -5481,7 +5656,7 @@
                       <label className="text-slate-400 font-semibold">CSRF State (<code className="code-inline">state</code>):</label>
                       <button
                         onClick={() => setAuthUrlState("csrf_" + Math.random().toString(16).slice(2, 10))}
-                        className="text-xs text-sky-400 hover:underline flex items-center gap-1 font-mono"
+                        className="px-2 py-0.5 rounded-lg text-xs text-sky-400 flex items-center gap-1 font-mono"
                       >
                         <RefreshCw className="w-2.5 h-2.5" /> Roll
                       </button>
@@ -5603,6 +5778,8 @@
 
                 </Disclosure>
               </div>
+
+              <DeeperLinks ids={["devtools", "errors", "mistakes", "real-launch"]} />
             </main>
           )}
 
@@ -5638,7 +5815,7 @@
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-xs">
                   <div
                     onClick={() => setDeepDiveTokenFocus("id_token")}
-                    className={`p-4 rounded-2xl border cursor-pointer transition space-y-2 ${
+                    className={`p-4 rounded-2xl border cursor-pointer raised transition space-y-2 ${
                       deepDiveTokenFocus === "id_token"
                         ? "bg-indigo-950/40 border-indigo-400 shadow-sm ring-1 ring-indigo-400/30"
                         : "bg-slate-950 border-slate-800 hover:border-slate-700"
@@ -5666,7 +5843,7 @@
 
                   <div
                     onClick={() => setDeepDiveTokenFocus("access_token")}
-                    className={`p-4 rounded-2xl border cursor-pointer transition space-y-2 ${
+                    className={`p-4 rounded-2xl border cursor-pointer raised transition space-y-2 ${
                       deepDiveTokenFocus === "access_token"
                         ? "bg-emerald-950/40 border-emerald-400 shadow-sm ring-1 ring-emerald-400/30"
                         : "bg-slate-950 border-slate-800 hover:border-slate-700"
@@ -5694,7 +5871,7 @@
 
                   <div
                     onClick={() => setDeepDiveTokenFocus("context")}
-                    className={`p-4 rounded-2xl border cursor-pointer transition space-y-2 ${
+                    className={`p-4 rounded-2xl border cursor-pointer raised transition space-y-2 ${
                       deepDiveTokenFocus === "context"
                         ? "bg-sky-950/40 border-sky-400 shadow-sm ring-1 ring-sky-400/30"
                         : "bg-slate-950 border-slate-800 hover:border-slate-700"
@@ -6001,6 +6178,8 @@ const userResourceUrl = payload.fhirUser;
                   </div>
                 </div>
               </section>
+
+              <DeeperLinks ids={["mistakes", "errors"]} />
             </main>
           )}
 
@@ -6016,7 +6195,7 @@ const userResourceUrl = payload.fhirUser;
               <section className="pt-2">
                 <h3 className="text-sm font-semibold text-slate-400 pb-1">Try it for real</h3>
                 <div className="border-b border-slate-700">
-                <Disclosure title="Try a real SMART launch" summary="Run the same sign-in against a free public SMART test server and watch the real requests in your browser.">
+                <Disclosure id="real-launch" title="Try a real SMART launch" summary="Run the same sign-in against a free public SMART test server and watch the real requests in your browser.">
                   <div className="space-y-5 max-w-4xl text-slate-300 leading-relaxed">
                     <p>
                       Everything else in this lab is simulated. The <a href="https://launch.smarthealthit.org/" className="text-sky-300 underline underline-offset-2 hover:text-sky-200" target="_blank" rel="noopener noreferrer">SMART App Launcher</a>,
@@ -6045,7 +6224,7 @@ const userResourceUrl = payload.fhirUser;
                     </p>
                   </div>
                 </Disclosure>
-                <Disclosure title="Compare real vendor sandboxes" summary={"Epic, Oracle Health and a mock server: which features each one advertises in its discovery file."}>
+                <Disclosure id="vendors" title="Compare real vendor sandboxes" summary={"Epic, Oracle Health and a mock server: which features each one advertises in its discovery file."}>
               {/* NEW SECTION A: REAL VENDOR SANDBOX COMPARISON */}
               <section className="space-y-5">
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-800 pb-4">
@@ -6208,7 +6387,7 @@ const userResourceUrl = payload.fhirUser;
                       </div>
                       <button
                         onClick={() => setCapabilityExpanded(null)}
-                        className="text-slate-400 hover:text-white text-xs font-mono"
+                        className="px-2 py-0.5 rounded-lg text-slate-400 hover:text-white text-xs font-mono"
                       >
                         ✕ Close
                       </button>
@@ -6231,7 +6410,7 @@ const userResourceUrl = payload.fhirUser;
               <section className="pt-10">
                 <h3 className="text-sm font-semibold text-slate-400 pb-1">Permissions and data</h3>
                 <div className="border-b border-slate-700">
-                <Disclosure title="Wildcard scopes vs. specific scopes" summary={<>What <code className="code-inline">patient/*.rs</code> really grants, and why narrow scopes are safer.</>}>
+                <Disclosure id="wildcard" title="Wildcard scopes vs. specific scopes" summary={<>What <code className="code-inline">patient/*.rs</code> really grants, and why narrow scopes are safer.</>}>
               {/* NEW SECTION B: SCOPE WILDCARD VS SPECIFIC */}
               <section className="space-y-5">
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-800 pb-4">
@@ -6308,7 +6487,7 @@ const userResourceUrl = payload.fhirUser;
               </section>
 
                 </Disclosure>
-                <Disclosure title="Granular scopes: narrowing a permission" summary="SMART v2 can limit a scope to one kind of data, such as lab results only.">
+                <Disclosure id="granular" title="Granular scopes: narrowing a permission" summary="SMART v2 can limit a scope to one kind of data, such as lab results only.">
                   <div className="grid gap-6 lg:grid-cols-2">
                     <div className="space-y-4 text-slate-300 leading-relaxed">
                       <p>
@@ -6343,7 +6522,7 @@ const userResourceUrl = payload.fhirUser;
                     </div>
                   </div>
                 </Disclosure>
-                <Disclosure title="Where the data rules come from: USCDI and US Core" summary="Which data every certified EHR must share, and the exact shape each piece takes in FHIR.">
+                <Disclosure id="uscdi" title="Where the data rules come from: USCDI and US Core" summary="Which data every certified EHR must share, and the exact shape each piece takes in FHIR.">
                   <div className="grid gap-6 lg:grid-cols-2">
                     <div className="space-y-4 text-slate-300 leading-relaxed">
                       <p>SMART decides who may see the data. Two other standards decide what the data is.</p>
@@ -6398,7 +6577,7 @@ const userResourceUrl = payload.fhirUser;
               <section className="pt-10">
                 <h3 className="text-sm font-semibold text-slate-400 pb-1">Building and debugging</h3>
                 <div className="border-b border-slate-700">
-                <Disclosure title="Seven common developer mistakes" summary={"Insecure habits that show up in real SMART apps, why they happen, and the fix for each."}>
+                <Disclosure id="mistakes" title="Seven common developer mistakes" summary={"Insecure habits that show up in real SMART apps, why they happen, and the fix for each."}>
               {/* NEW SECTION C: DEVELOPER ANTI-PATTERNS (7-ROW TABLE) */}
               <section className="space-y-4">
                 <div className="border-b border-slate-800 pb-3">
@@ -6481,7 +6660,7 @@ const userResourceUrl = payload.fhirUser;
               </section>
 
                 </Disclosure>
-                <Disclosure title="Debug a connection with browser DevTools" summary={"Five steps for reading the network traffic of a SMART launch."}>
+                <Disclosure id="devtools" title="Debug a connection with browser DevTools" summary={"Five steps for reading the network traffic of a SMART launch."}>
               {/* NEW SECTION D: DEVTOOLS DEBUGGING GUIDE (5 STEPS) */}
               <section className="space-y-5">
                 <div className="border-b border-slate-800 pb-3">
@@ -6539,7 +6718,7 @@ const userResourceUrl = payload.fhirUser;
                 </div>
               </section>
                 </Disclosure>
-                <Disclosure title="Backend services: no user signs in" summary={<>How a server-to-server app gets a token with <code className="code-inline">client_credentials</code> and a signed key.</>}>
+                <Disclosure id="backend" title="Backend services: no user signs in" summary={<>How a server-to-server app gets a token with <code className="code-inline">client_credentials</code> and a signed key.</>}>
               {/* NEW FEATURE B: client_credentials BACKEND SERVICE FLOW */}
               <section className="space-y-5">
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-800 pb-4">
@@ -6754,7 +6933,7 @@ grant_type=client_credentials
               </section>
 
                 </Disclosure>
-                <Disclosure title="Bulk data export ($export)" summary="How a backend service downloads data for a whole group of patients at once.">
+                <Disclosure id="bulk" title="Bulk data export ($export)" summary="How a backend service downloads data for a whole group of patients at once.">
                   <div className="space-y-5 max-w-4xl text-slate-300 leading-relaxed">
                     <p>
                       Backend services usually exist to do this. Instead of one request per patient, the service asks the server to prepare
@@ -6802,7 +6981,7 @@ Content-Type: application/json
                     <p><a href="https://hl7.org/fhir/uv/bulkdata/export.html" className="text-sky-300 underline underline-offset-2 hover:text-sky-200" target="_blank" rel="noopener noreferrer">Read the Bulk Data Access specification</a></p>
                   </div>
                 </Disclosure>
-                <Disclosure title="Error scenarios and how to fix them" summary={"Seven real failures, the exact server response for each, and how to fix it."}>
+                <Disclosure id="errors" title="Error scenarios and how to fix them" summary={"Seven real failures, the exact server response for each, and how to fix it."}>
               {/* NEW FEATURE E: ERROR SCENARIOS LAB */}
               <section className="space-y-4">
                 <div className="border-b border-slate-800 pb-3">
@@ -6849,7 +7028,7 @@ Content-Type: application/json
                         </div>
                         <button
                           onClick={() => setErrorScenario(null)}
-                          className="text-slate-400 hover:text-white font-mono"
+                          className="px-2 py-0.5 rounded-lg text-slate-400 hover:text-white font-mono"
                         >
                           ✕ Close
                         </button>
@@ -6910,7 +7089,7 @@ Content-Type: application/json
                   clearSavedProgress();
                   window.location.reload();
                 }}
-                className="underline underline-offset-2 hover:text-white"
+                className="px-2 py-0.5 rounded-lg hover:text-white"
               >
                 Start over
               </button>
@@ -6961,7 +7140,7 @@ Content-Type: application/json
                           type="button"
                           onClick={() => setGlossarySearch("")}
                           aria-label="Clear search"
-                          className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white"
+                          className="btn-flat absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white"
                         >
                           <X className="w-4 h-4" />
                         </button>
@@ -7022,6 +7201,7 @@ Content-Type: application/json
             </div>
           )}
         </div>
+        </DeeperContext.Provider>
         </GlossaryContext.Provider>
       );
     }
