@@ -1,49 +1,63 @@
-# SMART on FHIR Interactive Discovery, Scopes & OAuth 2.0 Lab
+# SMART on FHIR Interactive Lab
 
-### [Launch the Live Interactive Lab](https://burroclurse.github.io/SMART-on-FHIR-Interactive-Discovery-OAuth-2.0-Lab/)
+### [Open the lab](https://burroclurse.github.io/SMART-on-FHIR-Interactive-Discovery-OAuth-2.0-Lab/)
 
-An open-source, self-contained interactive learning workbench for mastering **SMART on FHIR Discovery (`/.well-known/smart-configuration`)**, **SMART v1/v2 Scopes**, **OAuth 2.0 with PKCE (`S256`)**, **Standalone vs. EHR Launch workflows**, and **OpenID Connect (`id_token`) vs. `access_token` vs. Patient Context**.
+How a health app finds a server, asks permission, and gets its tokens. A free, hands-on lab for people new to **SMART on FHIR**: discovery (`/.well-known/smart-configuration`), SMART v1/v2 scopes, OAuth 2.0 with PKCE (`S256`), standalone vs. EHR launch, and `id_token` vs. `access_token` vs. patient context.
+
+Everything follows one story: John connects a graphing app to his mother Eleanor's lab results.
 
 ---
 
-## What's Inside
+## The five tabs
 
-The lab is organized as a suggested path for people new to SMART on FHIR. Every section keeps the full technical detail.
+The tabs are a suggested path. Each one builds on the last.
 
 ### 1. Start Here
-* Plain-language orientation: John, his mother Eleanor, and who is involved in a SMART connection.
+* Who is involved in a SMART connection, in plain words.
 * How to read the lab: dark boxes are code, tinted text is an exact value, dotted words open the glossary.
-* Four core concepts, each with a video, a summary, and a hands-on demo.
+* Four core concepts, each with a video, a plain-language summary, key takeaways and a hands-on demo.
 
 ### 2. Guided Lab
-* Ten steps beside a live, searchable `/.well-known/smart-configuration` JSON inspector (`642` advertised scopes across `patient/`, `user/`, and `system/`).
-* SMART v2 scope anatomy (`patient/Observation.rs` vs. `patient/Observation.cruds`), caregiver scenarios, a check after each step, and a 10-question final assessment.
+* Opens on an overview: the big picture, the ten steps, and how each step works.
+* Ten steps beside a real server's settings file, with the lines each step is about highlighted. The file is searchable and lists `642` advertised scopes across `patient/`, `user/` and `system/`.
+* Scope anatomy (`patient/Observation.rs` vs. `patient/Observation.cruds`), a caregiver scenario, a check after several steps, and a 10-question final assessment.
 
 ### 3. Watch the Flow
-* **6-Actor, 19-Step Sequence Diagram** (modeled after Epic's Standalone & EHR Launch architecture).
-* **Standalone Launch (`launch-standalone`) vs. EHR Launch (`launch-ehr`)** toggle, **PKCE (`S256`) Tamper Tester**, and **Access Token Expiration + Refresh Token Renewal (`offline_access`)**.
-* A build-it-yourself authorization URL builder.
+* The whole sign-in, one message at a time: six parties and nineteen messages, modeled on Epic's published launch diagrams.
+* Standalone launch vs. EHR launch, stepped through in four phases with the exact request and response for each.
+* Try to break it: tamper with PKCE, let the access token expire and renew it with a refresh token (`offline_access`), or send the wrong token.
+* Build the sign-in URL yourself.
 
-### 4. Tokens (`id_token` vs. `access_token` vs. Context)
-* Side-by-side comparison, the `fhirUser` claim, and a visual of `need_patient_banner`.
+### 4. Tokens
+* `id_token` vs. `access_token` vs. patient context, side by side.
+* The `fhirUser` claim and a visual of `need_patient_banner`.
 
 ### 5. Go Deeper
-* Collapsed reference sections: vendor sandbox comparison (Epic, Oracle Health, mock server), wildcard vs. specific scopes, seven developer anti-patterns, a DevTools debugging guide, backend services (`client_credentials`), and seven error scenarios with fixes.
+Reference sections, collapsed until opened. The other four tabs link straight to the matching section.
+* Try a real SMART launch against a free public test server.
+* Compare vendor sandboxes (Epic, Oracle Health, a mock server).
+* Wildcard vs. specific scopes, granular scopes, and USCDI / US Core.
+* Seven common developer mistakes, a browser DevTools debugging guide, and seven error scenarios with fixes.
+* Backend services (`client_credentials`) and bulk data export (`$export`).
 
-A searchable 123-term glossary opens from any page, including a Plain-Language Basics category for readers new to the technical words.
+### Throughout
+* A searchable 123-term glossary, opened from the **Glossary** button or any dotted word. Its "Plain-Language Basics" category covers everyday terms like sandbox and endpoint.
+* Anything you can press looks like a raised button.
+* The browser's Back button returns to the previous tab. Each tab has its own address (for example `#guided-lab`), so a link can open the lab on a given tab.
+* Progress is saved in your browser, so a refresh picks up where you left off.
 
 ---
 
-## How to Run or Fork
+## Run it or fork it
 
-This entire application is built in a **single, zero-build HTML file (`index.html`)** using React 18, Tailwind CSS, and Babel Standalone via CDN:
+The whole lab is one HTML file (`index.html`) with no build step. It loads React 18, Tailwind CSS and Babel Standalone from a CDN.
 
-1. **Use Online:** Visit the [GitHub Pages live link](https://burroclurse.github.io/SMART-on-FHIR-Interactive-Discovery-OAuth-2.0-Lab/).
-2. **Run Locally:** Clone or download this repository and double-click `index.html` in any modern web browser.
-3. **Fork & Customize:** Click **Fork** in the top-right corner of GitHub, edit `index.html`, and enable GitHub Pages in your fork's settings.
+1. **Online:** open the [live lab](https://burroclurse.github.io/SMART-on-FHIR-Interactive-Discovery-OAuth-2.0-Lab/).
+2. **On your computer:** download `index.html` (or use the download button at the bottom of the lab) and open it in any modern browser.
+3. **Your own copy:** click **Fork** on GitHub, edit `index.html`, and turn on GitHub Pages in your fork's settings.
 
 ---
 
 ## License
 
-Released under the **MIT License** — free to use, modify, fork, and share for education and training.
+MIT License. Free to use, change, fork and share for education and training.
