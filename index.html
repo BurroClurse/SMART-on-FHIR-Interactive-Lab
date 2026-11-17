@@ -169,13 +169,23 @@
     .no-scrollbar::-webkit-scrollbar { display: none; }
     /* Phones: a label and its button stack instead of squeezing the text */
     @media (max-width: 639px) {
-      main .justify-between { flex-wrap: wrap; }
+      main .justify-between:not(.flex-col) { flex-wrap: wrap; }
     }
     :focus-visible { outline: 2px solid rgb(var(--sky-500)); outline-offset: 2px; }
     .tab-btn { transition: color 0.15s ease, border-color 0.15s ease; }
     .json-key-row:hover { background: rgb(var(--slate-800) / 0.5); }
     .progress-bar { transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1); transform-origin: left; }
     .card-hover { transition: border-color 0.15s ease, box-shadow 0.15s ease; }
+
+    /* Whatever a choice just changed lights up for a moment */
+    @keyframes lit {
+      0% { box-shadow: 0 0 0 3px rgb(245 158 11 / 0.95), 0 0 18px 4px rgb(245 158 11 / 0.45); }
+      70% { box-shadow: 0 0 0 3px rgb(245 158 11 / 0.55), 0 0 12px 2px rgb(245 158 11 / 0.2); }
+      100% { box-shadow: 0 0 0 3px rgb(245 158 11 / 0), 0 0 0 0 rgb(245 158 11 / 0); }
+    }
+    .lit { animation: lit 1.6s ease-out; }
+    /* Phones: rows scrolled into view stop below the pinned header and Flow controls */
+    [id^="seq-step-"], #flow-stage { scroll-margin-top: calc(var(--hdr, 0px) + 6.5rem); scroll-margin-bottom: 4.5rem; }
 
     /* Anything that can be pressed looks raised, and sinks when pressed.
        Glossary words, the section tabs and Show/Hide toggles stay flat. */
@@ -1793,6 +1803,29 @@
       </svg>
     );
 
+    // Lights an element up briefly when the value it watches changes, so a learner
+    // sees what their last choice affected. Nothing lights on first render.
+    const useLit = (watch) => {
+      const ref = useRef(null);
+      const first = useRef(true);
+      useEffect(() => {
+        if (first.current) {
+          first.current = false;
+          return;
+        }
+        const el = ref.current;
+        if (!el) return;
+        el.classList.remove("lit");
+        void el.offsetWidth;
+        el.classList.add("lit");
+      }, [watch]);
+      return ref;
+    };
+    const Lit = ({ watch, className, children, ...rest }) => {
+      const ref = useLit(watch);
+      return <div ref={ref} className={className} {...rest}>{children}</div>;
+    };
+
     // A word in running text that opens its glossary entry.
     const Term = ({ t, children }) => {
       const openTerm = useContext(GlossaryContext);
@@ -2036,7 +2069,9 @@
         setSimStage(stageOfStep(next));
         if (reveal) {
           requestAnimationFrame(() => {
-            const row = document.getElementById("seq-step-" + next);
+            const row = ["seq-step-", "seq-step-m-"]
+              .map((prefix) => document.getElementById(prefix + next))
+              .find((el) => el && el.offsetParent !== null);
             if (row) row.scrollIntoView({ block: "nearest", behavior: "smooth" });
           });
         }
@@ -2386,12 +2421,468 @@
         return list;
       }, [glossarySearch, glossaryCategory]);
 
+      // Phones pin the Flow controls under the header, so they need its height.
+      const headerRef = useRef(null);
+      useEffect(() => {
+        const el = headerRef.current;
+        if (!el || typeof ResizeObserver === "undefined") return;
+        const ro = new ResizeObserver(() =>
+          document.documentElement.style.setProperty("--hdr", el.offsetHeight + "px")
+        );
+        ro.observe(el);
+        return () => ro.disconnect();
+      }, []);
+
+      const isPhoneLayout = () => window.matchMedia("(max-width: 1023px)").matches;
+      const stageRef = useLit(simStage + launchMode);
+      const stepHeadRef = useLit(activeSeqStepObj.label + activeSeqStepObj.detail);
+      const modeBadgeRef = useLit(launchMode);
+      const [wireOpen, setWireOpen] = useState(false);
+
+      // A step shows red when the learner's choices made it fail.
+      const stepFailed = (num) =>
+        (num === 10 && simStage === 3 && tamperMode === "attacker" && tokenExchangeResult === "error") ||
+        (num === 13 && simStage === 4 && (tokenExpired || fhirApiResult === "wrong_id_token" || fhirApiResult === "delete_obs"));
+
+      // Phase buttons inside a phase: on phones, bring the new phase's top into view.
+      const goToStage = (stage) => {
+        setSimStage(stage);
+        if (isPhoneLayout()) {
+          requestAnimationFrame(() => {
+            const el = document.getElementById("flow-stage");
+            if (el) el.scrollIntoView({ block: "start", behavior: "smooth" });
+          });
+        }
+      };
+
+      // What the Live HTTP Wire panel shows right now, in one line and as change keys.
+      const wireRequest =
+        simStage <= 2
+          ? "GET /smart/authorize"
+          : simStage === 3
+          ? "POST /smart/token"
+          : selectedSeqStepNum >= 16
+          ? "POST /smart/token (refresh)"
+          : fhirApiResult === "delete_obs"
+          ? "DELETE /fhir/Observation"
+          : "GET /fhir/Observation";
+      const wireStatus =
+        simStage <= 2
+          ? (authCompleted ? "302 Found" : "waiting for sign-in")
+          : simStage === 3
+          ? (tokenExchangeResult === null ? "not sent yet" : tokenExchangeResult === "error" ? "400 Bad Request" : "200 OK")
+          : selectedSeqStepNum >= 16
+          ? "200 OK"
+          : tokenExpired || fhirApiResult === "wrong_id_token"
+          ? "401 Unauthorized"
+          : fhirApiResult === "ui_access_token_mistake"
+          ? "app-side mistake"
+          : fhirApiResult === "delete_obs"
+          ? "403 Forbidden"
+          : "200 OK";
+      const wireFailed = /^4|mistake/.test(wireStatus);
+      const wireReqKey = JSON.stringify(
+        simStage <= 2
+          ? [1, launchMode, simScopes, authUrlClientId, authUrlRedirectUri, authUrlState, authUrlAud, currentPkce.challenge]
+          : simStage === 3
+          ? [3, issuedAuthCode, authUrlClientId, authUrlRedirectUri, tamperMode, currentPkce.verifier]
+          : selectedSeqStepNum >= 16
+          ? [4, "refresh", tokenGeneration]
+          : [4, fhirApiResult === "delete_obs", fhirApiResult === "wrong_id_token", tokenExpired, accessTokenFormat, tokenGeneration]
+      );
+      const wireResKey = JSON.stringify([simStage, wireStatus, issuedAuthCode, launchMode, accessTokenFormat, tokenGeneration, simScopes]);
+
+      // The "Live HTTP Wire" panel. Desktop shows it beside the phase; phones open it
+      // from the strip pinned to the bottom of Watch the Flow.
+      const renderInspector = () => (
+            <div className="space-y-4">
+              <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+                <span className="font-sans text-xs font-bold text-slate-300 flex items-center gap-2">
+                  <KeyRound className="w-4 h-4 text-emerald-400" />
+                  Live HTTP Wire & Payload Inspector
+                </span>
+                <span className="px-2 py-0.5 rounded bg-slate-900 text-sky-300 border border-slate-800 text-xs">
+                  {launchMode === "ehr" ? "launch-ehr" : "launch-standalone"}
+                </span>
+              </div>
+
+              <Lit watch={wireReqKey} className="space-y-1.5 rounded-xl">
+                <div className="text-xs font-sans font-semibold text-slate-400">
+                  {simStage <= 2
+                    ? "1. Outgoing Browser Request (authorization_endpoint)"
+                    : simStage === 3
+                    ? "2. Outgoing Back-Channel POST (token_endpoint)"
+                    : selectedSeqStepNum >= 16
+                    ? "3. Outgoing Refresh Token Grant (POST /smart/token)"
+                    : "3. Outgoing FHIR Resource Request"}
+                </div>
+
+                {simStage <= 2 && (
+                  <div className="p-3.5 rounded-xl bg-slate-900/90 border border-slate-800 space-y-1 text-sm leading-relaxed overflow-x-auto">
+                    <div>
+                      <span className="text-sky-400 font-bold">GET</span>{" "}
+                      <span className="text-white">/smart/authorize</span>{" "}
+                      <span className="text-slate-500">HTTP/1.1</span>
+                    </div>
+                    <div className="text-slate-400">
+                      Host: <span className="text-slate-200">api.mock.health</span>
+                    </div>
+                    <div className="pt-1 text-slate-300">
+                      ?response_type=<span className="text-emerald-300">code</span>
+                    </div>
+                    <div className="text-slate-300">
+                      &amp;client_id=<span className="text-emerald-300">{authUrlClientId}</span>
+                    </div>
+                    <div className="text-slate-300">
+                      &amp;redirect_uri=<span className="text-emerald-300">{authUrlRedirectUri}</span>
+                    </div>
+                    {launchMode === "ehr" && (
+                      <div className="text-indigo-200 bg-indigo-500/20 px-1.5 py-0.5 rounded border border-indigo-500/40 font-bold">
+                        &amp;launch=xyz987_opaque_ehr_context
+                      </div>
+                    )}
+                    <div className="text-slate-300 break-all">
+                      &amp;scope=<span className="text-amber-300">{simScopes.join("%20")}</span>
+                    </div>
+                    <div className="text-slate-300">
+                      &amp;state=<span className="text-emerald-300">{authUrlState}</span>
+                    </div>
+                    <div className="text-slate-300">
+                      &amp;aud=<span className="text-emerald-300">{authUrlAud}</span>
+                    </div>
+                    <div className="text-slate-300 break-all bg-sky-500/10 px-1.5 py-0.5 rounded border border-sky-500/20">
+                      &amp;code_challenge=<span className="text-sky-300 font-bold">{currentPkce.challenge}</span>
+                    </div>
+                    <div className="text-slate-300">
+                      &amp;code_challenge_method=<span className="text-sky-300 font-bold">S256</span>
+                    </div>
+                  </div>
+                )}
+
+                {simStage === 3 && (
+                  <div className="p-3.5 rounded-xl bg-slate-900/90 border border-slate-800 space-y-1 text-sm leading-relaxed overflow-x-auto">
+                    <div>
+                      <span className="text-emerald-400 font-bold">POST</span>{" "}
+                      <span className="text-white">/smart/token</span>{" "}
+                      <span className="text-slate-500">HTTP/1.1</span>
+                    </div>
+                    <div className="text-slate-400">
+                      Host: <span className="text-slate-200">api.mock.health</span>
+                    </div>
+                    <div className="text-slate-400">
+                      Content-Type: <span className="text-slate-200">application/x-www-form-urlencoded</span>
+                    </div>
+                    <div className="pt-2 border-t border-slate-800 mt-2 space-y-1">
+                      <div>grant_type=<span className="text-emerald-300">authorization_code</span></div>
+                      <div>&amp;code=<span className="text-amber-300 font-bold">{issuedAuthCode}</span></div>
+                      <div>&amp;client_id=<span className="text-emerald-300">{authUrlClientId}</span></div>
+                      <div>&amp;redirect_uri=<span className="text-emerald-300">{authUrlRedirectUri}</span></div>
+                      <div className={`p-1.5 rounded border break-all ${
+                        tamperMode === "valid"
+                          ? "bg-emerald-500/10 border-emerald-500/30 text-emerald-300"
+                          : "bg-rose-500/15 border-rose-500/40 text-rose-300"
+                      }`}>
+                        &amp;code_verifier=<span className="font-bold">{tamperMode === "valid" ? currentPkce.verifier : "ATTACKER_GUESSED_WRONG_VERIFIER_99999"}</span>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {simStage === 4 && selectedSeqStepNum >= 16 && (
+                  <div className="p-3.5 rounded-xl bg-slate-900/90 border border-emerald-500/40 space-y-1 text-sm leading-relaxed">
+                    <div>
+                      <span className="text-emerald-400 font-bold">POST</span>{" "}
+                      <span className="text-white">/smart/token</span>{" "}
+                      <span className="text-slate-500">HTTP/1.1</span>
+                    </div>
+                    <div className="text-slate-400">
+                      Host: <span className="text-slate-200">api.mock.health</span>
+                    </div>
+                    <div className="pt-2 border-t border-slate-800 mt-1 space-y-1">
+                      <div>grant_type=<span className="text-emerald-300 font-bold">refresh_token</span></div>
+                      <div>&amp;refresh_token=<span className="text-amber-300 font-bold">rt_live_88a9c0_gen{Math.max(1, tokenGeneration - 1)}</span></div>
+                      <div>&amp;client_id=<span className="text-sky-300">{authUrlClientId}</span></div>
+                    </div>
+                  </div>
+                )}
+
+                {simStage === 4 && selectedSeqStepNum < 16 && (
+                  <div className="p-3.5 rounded-xl bg-slate-900/90 border border-slate-800 space-y-1 text-sm leading-relaxed">
+                    <div>
+                      <span className="text-sky-400 font-bold">
+                        {fhirApiResult === "delete_obs" ? "DELETE" : "GET"}
+                      </span>{" "}
+                      <span className="text-white">
+                        {fhirApiResult === "delete_obs"
+                          ? "/fhir/Observation/hba1c-992"
+                          : "/fhir/Observation?patient=pat-mother-eleanor-456&code=4548-4"}
+                      </span>
+                    </div>
+                    <div className="text-slate-400">
+                      Host: <span className="text-slate-200">api.mock.health</span>
+                    </div>
+                    <div className={`break-all ${
+                      fhirApiResult === "wrong_id_token" || tokenExpired ? "text-rose-300" : "text-emerald-300"
+                    }`}>
+                      Authorization: Bearer{" "}
+                      {fhirApiResult === "wrong_id_token"
+                        ? "eyJraWQiOiJzbWFydC1rZXktMSIs... (ID_TOKEN_SENT_BY_MISTAKE)"
+                        : accessTokenFormat === "opaque"
+                        ? `st_live_opaque_gen${tokenGeneration}_99a8b7`
+                        : `eyJhbGciOiJSUzI1NiIsImdlbiI6${tokenGeneration}... (${
+                            tokenExpired ? "EXPIRED_ACCESS_TOKEN" : "VALID_ACCESS_TOKEN"
+                          })`}
+                    </div>
+                  </div>
+                )}
+              </Lit>
+
+              <Lit watch={wireResKey} className="space-y-1.5 rounded-xl">
+                <div className="text-xs font-sans font-semibold text-slate-400">
+                  Server HTTP Response
+                </div>
+
+                {simStage <= 2 && (
+                  <div className="p-3.5 rounded-xl bg-slate-900/90 border border-slate-800 text-xs space-y-2">
+                    {!authCompleted ? (
+                      <div className="text-slate-400 font-sans">
+                        Waiting for {launchMode === "ehr" ? "EHR launch confirmation" : "portal sign-in"} at <code className="code-inline text-sky-300">/smart/authorize</code>... (Go to Phase 2 and click the green button).
+                      </div>
+                    ) : (
+                      <>
+                        <div className="text-emerald-400 font-bold">
+                          HTTP/1.1 302 Found (Step 8 Redirect)
+                        </div>
+                        <div className="text-slate-300 break-all">
+                          Location: https://app.example.org/callback?code=<span className="text-amber-300 font-bold">{issuedAuthCode}</span>&amp;state=<span className="text-sky-300">{authUrlState}</span>
+                        </div>
+                        <div className="p-2 rounded bg-emerald-950/40 border border-emerald-500/30 text-emerald-200 font-sans text-xs">
+                          ✓ Authorization code returned! Proceed to <strong>Phase 3 (<code className="code-inline">POST /smart/token</code>)</strong> to exchange it.
+                        </div>
+                      </>
+                    )}
+                  </div>
+                )}
+
+                {simStage === 3 && (
+                  <div className="p-3.5 rounded-xl bg-slate-900/90 border border-slate-800 text-xs space-y-2">
+                    {tokenExchangeResult === null && (
+                      <div className="text-slate-400 font-sans">
+                        Click <strong>"Execute POST /smart/token Exchange"</strong> in this phase to inspect the {launchMode === "ehr" ? "EHR Launch" : "Standalone Launch"} token response.
+                      </div>
+                    )}
+                    {tokenExchangeResult === "error" && (
+                      <div className="space-y-2">
+                        <div className="text-rose-400 font-bold">
+                          HTTP/1.1 400 Bad Request (Failed at Step 10)
+                        </div>
+                        <pre className="code-island text-rose-300 whitespace-pre-wrap">
+                          {JSON.stringify(
+                            {
+                              error: "invalid_grant",
+                              error_description:
+                                "PKCE verification failed: S256(code_verifier) does not match stored code_challenge."
+                            },
+                            null,
+                            2
+                          )}
+                        </pre>
+                      </div>
+                    )}
+                    {tokenExchangeResult === "success" && (
+                      <div className="space-y-2">
+                        <div className="text-emerald-400 font-bold">
+                          HTTP/1.1 200 OK (Step 11 • {launchMode === "ehr" ? "EHR Launch Response" : "Standalone Response"})
+                        </div>
+                        <pre className="code-island text-emerald-300 whitespace-pre-wrap overflow-x-auto">
+                          {JSON.stringify(
+                            launchMode === "ehr"
+                              ? {
+                                  access_token:
+                                    accessTokenFormat === "opaque"
+                                      ? `st_live_opaque_gen${tokenGeneration}_99a8b7`
+                                      : `eyJhbGciOiJSUzI1NiIsImtpZCI6InNtYXJ0LWtleS0xIiwiZ2VuIjoidj${tokenGeneration}ifQ...`,
+                                  token_type: "Bearer",
+                                  expires_in: 3600,
+                                  scope: grantedScopesList.join(" "),
+                                  patient: "pat-mother-eleanor-456",
+                                  encounter: "enc-ed-triage-8821",
+                                  need_patient_banner: false,
+                                  smart_style_url: "https://api.mock.health/smart/style.json",
+                                  id_token: "eyJraWQiOiJzbWFydC1rZXktMSIs... (fhirUser: Practitioner/dr-smith-101)",
+                                  ...(simScopes.includes("offline_access") || simScopes.includes("online_access")
+                                    ? { refresh_token: `rt_live_88a9c0_gen${tokenGeneration}` }
+                                    : {})
+                                }
+                              : {
+                                  access_token:
+                                    accessTokenFormat === "opaque"
+                                      ? `st_live_opaque_gen${tokenGeneration}_99a8b7`
+                                      : `eyJhbGciOiJSUzI1NiIsImtpZCI6InNtYXJ0LWtleS0xIiwiZ2VuIjoidj${tokenGeneration}ifQ...`,
+                                  token_type: "Bearer",
+                                  expires_in: 3600,
+                                  scope: grantedScopesList.join(" "),
+                                  patient: "pat-mother-eleanor-456",
+                                  id_token: "eyJraWQiOiJzbWFydC1rZXktMSIs... (fhirUser: RelatedPerson/john-caregiver-42)",
+                                  ...(simScopes.includes("offline_access")
+                                    ? { refresh_token: `rt_live_88a9c0_gen${tokenGeneration}` }
+                                    : {})
+                                },
+                            null,
+                            2
+                          )}
+                        </pre>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {simStage === 4 && (
+                  <div className="p-3.5 rounded-xl bg-slate-900/90 border border-slate-800 text-xs space-y-2">
+                    {selectedSeqStepNum >= 16 ? (
+                      <div className="space-y-1.5">
+                        <div className="text-emerald-400 font-bold">
+                          HTTP/1.1 200 OK (Step 18 Refresh Token Rotated!)
+                        </div>
+                        <pre className="code-island text-emerald-300 whitespace-pre-wrap">
+                          {JSON.stringify(
+                            {
+                              access_token: `eyJhbGciOiJSUzI1NiIsImdlbiI6InY${tokenGeneration}i...`,
+                              token_type: "Bearer",
+                              expires_in: 3600,
+                              scope: grantedScopesList.join(" "),
+                              patient: "pat-mother-eleanor-456",
+                              refresh_token: `rt_live_88a9c0_gen${tokenGeneration}`
+                            },
+                            null,
+                            2
+                          )}
+                        </pre>
+                      </div>
+                    ) : tokenExpired ? (
+                      <div className="space-y-1.5">
+                        <div className="text-rose-400 font-bold">
+                          HTTP/1.1 401 Unauthorized (Failed at Step 13 — Token Expired)
+                        </div>
+                        <div className="text-amber-300">
+                          WWW-Authenticate: Bearer error="invalid_token", error_description="The access token expired (exp claim is in the past)"
+                        </div>
+                        <pre className="code-island text-rose-300 whitespace-pre-wrap">
+                          {JSON.stringify(
+                            {
+                              resourceType: "OperationOutcome",
+                              issue: [
+                                {
+                                  severity: "error",
+                                  code: "expired",
+                                  diagnostics:
+                                    "Access token TTL (3600s) elapsed. Use your refresh_token at /smart/token (Steps 16-18) to obtain a new access_token."
+                                }
+                              ]
+                            },
+                            null,
+                            2
+                          )}
+                        </pre>
+                      </div>
+                    ) : fhirApiResult === "wrong_id_token" ? (
+                      <div className="space-y-1.5">
+                        <div className="text-rose-400 font-bold">
+                          HTTP/1.1 401 Unauthorized (Mistake: ID token sent to the API)
+                        </div>
+                        <div className="text-amber-300">
+                          WWW-Authenticate: Bearer error="invalid_token", error_description="Not an access token for this server"
+                        </div>
+                        <pre className="code-island text-rose-300 whitespace-pre-wrap">
+                          {JSON.stringify(
+                            {
+                              error: "invalid_token",
+                              error_description:
+                                "Token validation failed at Step 13: Audience ('aud': 'john-graph-app') does not match FHIR Resource Server ('https://api.mock.health/fhir') and token contains no 'scope' claim. Never send an id_token as a Bearer token!"
+                            },
+                            null,
+                            2
+                          )}
+                        </pre>
+                      </div>
+                    ) : fhirApiResult === "ui_access_token_mistake" ? (
+                      <div className="space-y-1.5">
+                        <div className="text-amber-400 font-bold">
+                          App UI Warning (Mistake: reading the access token for identity)
+                        </div>
+                        <p className="text-slate-300 font-sans">
+                          Access tokens are meant for the <strong>FHIR Resource Server</strong>, not for the client app to identify the logged-in user! If the server issues an <strong>Opaque Access Token</strong> (<code className="code-inline">st_live_opaque...</code>), your app cannot decode it at all. Always read user identity (<code className="code-inline">fhirUser</code>, <code className="code-inline">name</code>) from the <strong><code className="code-inline">id_token</code></strong>.
+                        </p>
+                      </div>
+                    ) : fhirApiResult === "delete_obs" ? (
+                      <div className="space-y-1.5">
+                        <div className="text-rose-400 font-bold">
+                          HTTP/1.1 403 Forbidden (Insufficient Scope at Step 13)
+                        </div>
+                        <div className="text-rose-300">WWW-Authenticate: Bearer error="insufficient_scope", scope="patient/Observation.cruds"</div>
+                        <pre className="code-island text-rose-300 whitespace-pre-wrap">
+                          {JSON.stringify(
+                            {
+                              resourceType: "OperationOutcome",
+                              issue: [
+                                {
+                                  severity: "error",
+                                  code: "forbidden",
+                                  diagnostics:
+                                    "Access token granted 'patient/Observation.rs' (read/search only). 'd' (delete) permission was not granted."
+                                }
+                              ]
+                            },
+                            null,
+                            2
+                          )}
+                        </pre>
+                      </div>
+                    ) : (
+                      <div className="space-y-1.5">
+                        <div className="text-emerald-400 font-bold">
+                          HTTP/1.1 200 OK (Step 14 • Generation #{tokenGeneration} Token Verified)
+                        </div>
+                        <pre className="code-island text-emerald-300 whitespace-pre-wrap">
+                          {JSON.stringify(
+                            {
+                              resourceType: "Bundle",
+                              type: "searchset",
+                              total: 1,
+                              entry: [
+                                {
+                                  resource: {
+                                    resourceType: "Observation",
+                                    id: "hba1c-992",
+                                    subject: { reference: "Patient/pat-mother-eleanor-456" },
+                                    encounter:
+                                      launchMode === "ehr"
+                                        ? { reference: "Encounter/enc-ed-triage-8821" }
+                                        : undefined,
+                                    code: { text: "Hemoglobin A1c" },
+                                    valueQuantity: { value: 6.8, unit: "%" }
+                                  }
+                                }
+                              ]
+                            },
+                            null,
+                            2
+                          )}
+                        </pre>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </Lit>
+            </div>
+      );
+
       return (
         <GlossaryContext.Provider value={openTerm}>
         <DeeperContext.Provider value={openDeeper}>
         <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col font-sans">
           {/* Top Header & Navigation */}
-          <header className="border-b border-slate-700 bg-slate-900 sticky top-0 z-30">
+          <header ref={headerRef} className="border-b border-slate-700 bg-slate-900 sticky top-0 z-30">
             <div className="max-w-7xl mx-auto px-4 sm:px-6 pt-3 sm:pt-4 flex flex-col gap-2 sm:gap-3">
               <div className="flex items-center justify-between gap-4">
                 <div className="flex items-center gap-3 min-w-0">
@@ -2537,7 +3028,7 @@
                   </ol>
                 </div>
 
-                <aside className="lg:col-span-5 space-y-4 lg:border-l lg:border-slate-700 lg:pl-8">
+                <aside className="min-w-0 lg:col-span-5 space-y-4 lg:border-l lg:border-slate-700 lg:pl-8">
                   <h3 className="text-lg font-semibold text-white">How to read this lab</h3>
                   <div className="code-island rounded-xl border p-4 overflow-x-auto">
                     <span className="code-label">HTTP request</span>
@@ -4183,7 +4674,7 @@
 
           {/* WATCH THE FLOW: launch, PKCE and token simulator */}
           {activeTab === "simulator" && (
-            <main role="tabpanel" id="panel-simulator" aria-labelledby="tab-simulator" className="tab-panel max-w-7xl w-full mx-auto flex-1 flex flex-col gap-8 p-4 sm:p-6">
+            <main role="tabpanel" id="panel-simulator" aria-labelledby="tab-simulator" className="tab-panel max-w-7xl w-full mx-auto flex-1 flex flex-col gap-8 p-4 sm:p-6 pb-24 sm:pb-24 lg:pb-6">
               <div className="space-y-3 pt-2">
                 <h2 className="text-2xl sm:text-3xl font-semibold text-white">Watch the whole sign-in, one message at a time</h2>
                 <p className="text-slate-300 max-w-prose leading-relaxed">
@@ -4194,6 +4685,50 @@
                   <li><span className="font-semibold text-white">Step through the four phases.</span> Each one lights up its messages in the diagram and shows the exact request and response.</li>
                   <li><span className="font-semibold text-white">Try to break it.</span> Tamper with PKCE, let the token expire, or send the wrong token, and see what the server says.</li>
                 </ol>
+              </div>
+
+              {/* Phones: launch type and phase stay pinned under the header while scrolling */}
+              <div className="lg:hidden sticky z-20 -mx-4 sm:-mx-6 -my-4 px-4 sm:px-6 py-2 bg-slate-950/95 backdrop-blur border-y border-slate-700 space-y-2" style={{ top: "var(--hdr, 0px)" }}>
+                <div className="flex items-center gap-2">
+                  <span className="text-xs font-semibold text-slate-400 w-12 shrink-0">Launch</span>
+                  <div className="grid grid-cols-2 gap-1 flex-1">
+                    {[["standalone", "Standalone"], ["ehr", "EHR"]].map(([mode, label]) => (
+                      <button
+                        key={mode}
+                        type="button"
+                        onClick={() => handleSwitchLaunchMode(mode)}
+                        aria-pressed={launchMode === mode}
+                        className={"px-2 py-1.5 rounded-lg text-xs font-bold border " + (
+                          launchMode === mode
+                            ? (mode === "ehr" ? "bg-indigo-500 text-white border-indigo-500" : "bg-sky-500 text-white border-sky-500")
+                            : "bg-slate-900 text-slate-300 border-slate-700"
+                        )}
+                      >
+                        {label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="text-xs font-semibold text-slate-400 w-12 shrink-0">Phase</span>
+                  <div className="grid grid-cols-4 gap-1 flex-1">
+                    {["Setup", "Sign-in", "Token", "API"].map((label, i) => (
+                      <button
+                        key={label}
+                        type="button"
+                        onClick={() => setSimStage(i + 1)}
+                        aria-pressed={simStage === i + 1}
+                        className={"px-1 py-1.5 rounded-lg text-xs font-bold border " + (
+                          simStage === i + 1
+                            ? "bg-emerald-500 text-white border-emerald-500"
+                            : "bg-slate-900 text-slate-300 border-slate-700"
+                        )}
+                      >
+                        {i + 1} {label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
               </div>
 
               {/* Mode Switcher & Stepper Controls */}
@@ -4207,7 +4742,7 @@
                   </div>
 
                   <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 shrink-0">
-                    <div className="flex items-center bg-slate-950 p-1 rounded-xl border border-slate-800">
+                    <div className="hidden lg:flex items-center bg-slate-950 p-1 rounded-xl border border-slate-800">
                       <button
                         onClick={() => handleSwitchLaunchMode("standalone")}
                         className={`px-3 py-2 rounded-lg text-xs font-bold flex items-center gap-1.5 transition ${
@@ -4251,6 +4786,7 @@
                         Standalone Launch vs. EHR Launch: Side-by-Side Token & Context Diff
                       </span>
                       <span
+                        ref={modeBadgeRef}
                         className={`px-2 py-0.5 rounded text-xs font-bold uppercase ${
                           launchMode === "standalone"
                             ? "bg-sky-500/20 text-sky-300 border border-sky-500/30"
@@ -4328,7 +4864,7 @@
                 </div>
 
                 {/* 4-Stage Stepper Buttons */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2.5">
+                <div className="hidden lg:grid lg:grid-cols-4 gap-2.5">
                   {[
                     { stage: 1, title: "Phase 1: Launch & PKCE Setup", desc: "Steps 0–1 • Discovery & S256", icon: Lock },
                     { stage: 2, title: "Phase 2: GET /smart/authorize", desc: "Steps 2–8 • Front-channel auth", icon: Globe },
@@ -4406,7 +4942,7 @@
 
 
                 {/* Selected step: read it, then move on (sits above the diagram) */}
-                <div className="rounded-xl border border-sky-700 bg-slate-900 p-4 space-y-2" aria-live="polite">
+                <div ref={stepHeadRef} className="hidden lg:block rounded-xl border border-sky-700 bg-slate-900 p-4 space-y-2" aria-live="polite">
                   <div className="flex flex-wrap items-center justify-between gap-3">
                     <span className="text-sm text-slate-400">
                       Phase {stageOfStep(selectedSeqStepNum)} of 4{diagramViewMode === "slice" ? ": showing only this phase's messages" : ""}
@@ -4447,7 +4983,8 @@
                     <span className="mt-1.5 w-3 h-3 rounded-full bg-amber-400 border border-slate-50/40 shrink-0" aria-hidden="true" />
                     <span>Yellow dot: passes through the Reverse Proxy (the secure gateway).</span>
                   </li>
-                  <li>Highlighted columns: the parties in this step.</li>
+                  <li className="hidden lg:block">Highlighted columns: the parties in this step.</li>
+                  <li className="lg:hidden">Tap a message to open it. Each row names who sends it and who receives it.</li>
                   <li>
                     Steps 0&ndash;15 follow Epic&rsquo;s standalone diagram; 16&ndash;18 (refresh) are added here. EHR mode keeps the same numbers. Epic&rsquo;s own EHR diagram (0&ndash;11) folds the sign-in check, steps 3&ndash;6, into one arrow.{" "}
                     <a href="https://fhir.epic.com/Documentation?docId=oauth2tutorial&amp;section=testing-a-standalone-launch" className="text-sky-300 underline underline-offset-2 hover:text-sky-200" target="_blank" rel="noopener noreferrer">Epic&rsquo;s diagrams</a>
@@ -4455,7 +4992,7 @@
                 </ul>
                 </OpenOnDesktop>
 
-                <div className="overflow-x-auto">
+                <div className="hidden lg:block overflow-x-auto">
                   <div className="min-w-[680px] space-y-2">
                     <div className="grid grid-cols-6 gap-2 text-center pb-2 border-b border-slate-800">
                       {EPIC_ACTORS.map((actor) => {
@@ -4496,20 +5033,13 @@
                         const widthPercent = ((rightIdx - leftIdx) / 6) * 100;
                         const isRightward = step.to > step.from;
 
-                        const isErrorStep =
-                          (step.num === 10 &&
-                            simStage === 3 &&
-                            tamperMode === "attacker" &&
-                            tokenExchangeResult === "error") ||
-                          (step.num === 13 &&
-                            simStage === 4 &&
-                            (tokenExpired || fhirApiResult === "wrong_id_token" || fhirApiResult === "delete_obs"));
+                        const isErrorStep = stepFailed(step.num);
 
                         const isRefreshStep = step.num >= 16;
 
                         return (
+                          <Lit key={step.num} watch={[step.label, step.detail, isSelected, isErrorStep].join("|")} className="rounded-xl">
                           <button
-                            key={step.num}
                             id={"seq-step-" + step.num}
                             aria-current={isSelected ? "step" : undefined}
                             onClick={() => goToSeqStep(step.num)}
@@ -4581,17 +5111,87 @@
                               </div>
                             </div>
                           </button>
+                          </Lit>
                         );
                       })}
                     </div>
                   </div>
                 </div>
 
+                {/* Phones: the same messages as a list. Tap one to open it. */}
+                <div className="lg:hidden space-y-2">
+                  <p className="text-sm text-slate-400">
+                    Phase {stageOfStep(selectedSeqStepNum)} of 4{diagramViewMode === "slice" ? ": showing only this phase's messages" : ""}
+                  </p>
+                  {visibleSequenceSteps.map((step) => {
+                    const isSelected = step.num === selectedSeqStepNum;
+                    const isErrorStep = stepFailed(step.num);
+                    const isRefreshStep = step.num >= 16;
+                    const tone = isErrorStep
+                      ? "bg-rose-950/40 border-rose-500/60"
+                      : isSelected
+                      ? "bg-emerald-500/15 border-emerald-400"
+                      : isRefreshStep
+                      ? "bg-emerald-950/20 border-emerald-500/30"
+                      : "bg-slate-950/60 border-slate-700";
+                    return (
+                      <Lit key={step.num} watch={[step.label, step.detail, isSelected, isErrorStep].join("|")} className="rounded-xl">
+                        <button
+                          type="button"
+                          id={"seq-step-m-" + step.num}
+                          aria-current={isSelected ? "step" : undefined}
+                          aria-expanded={isSelected}
+                          onClick={() => goToSeqStep(step.num)}
+                          className={"w-full text-left p-3 rounded-xl border space-y-1 " + tone}
+                        >
+                          <span className="flex flex-wrap items-center gap-x-1.5 text-xs font-mono text-slate-400">
+                            <span>{EPIC_ACTORS[step.from].label}</span>
+                            <span aria-hidden="true">{step.bidirectional ? "⟷" : "→"}</span>
+                            <span>{EPIC_ACTORS[step.to].label}</span>
+                            {step.viaProxy && (
+                              <span className="inline-flex items-center gap-1">
+                                <span className="w-2.5 h-2.5 rounded-full bg-amber-400 border border-slate-950" aria-hidden="true" />
+                                via Reverse Proxy
+                              </span>
+                            )}
+                          </span>
+                          <span className={"block text-sm font-semibold " + (isErrorStep ? "text-rose-300" : isSelected || isRefreshStep ? "text-emerald-300" : "text-slate-200")}>
+                            {rich(step.label)}
+                          </span>
+                        </button>
+                        {isSelected && (
+                          <div className="mt-1 ml-3 pl-3 border-l-2 border-emerald-400 space-y-3 py-2" aria-live="polite">
+                            <p className="text-slate-300 leading-relaxed">{rich(step.detail, true)}</p>
+                            <div className="flex items-center gap-2">
+                              <button
+                                type="button"
+                                onClick={() => goToSeqStep(selectedSeqStepNum - 1, true)}
+                                disabled={selectedSeqStepNum === 0}
+                                className="flex-1 px-3 py-2 rounded-lg border border-slate-700 bg-slate-900 disabled:opacity-40 text-sm font-semibold text-slate-200"
+                              >
+                                &larr; Previous step
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => goToSeqStep(selectedSeqStepNum + 1, true)}
+                                disabled={selectedSeqStepNum === 18}
+                                className="flex-1 px-3 py-2 rounded-lg bg-sky-500 disabled:opacity-40 text-sm font-semibold text-white"
+                              >
+                                Next step &rarr;
+                              </button>
+                            </div>
+                          </div>
+                        )}
+                      </Lit>
+                    );
+                  })}
+                </div>
+
               </div>
 
               {/* SIMULATOR STAGES INTERACTIVE WORKSPACE */}
               <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-                <div className="lg:col-span-7 bg-slate-900/70 border border-slate-800 rounded-2xl p-5 sm:p-6 flex flex-col justify-between space-y-6">
+                <div id="flow-stage" ref={stageRef} className="lg:col-span-7 bg-slate-900/70 border border-slate-800 rounded-2xl p-5 sm:p-6 flex flex-col justify-between space-y-6">
                   {simStage === 1 && (
                     <div className="space-y-5">
                       <div>
@@ -4919,7 +5519,7 @@
                           <div className="flex flex-wrap items-center gap-1 font-mono text-xs">
                             <button
                               onClick={() => setSelectedJwtPart("header")}
-                              className={`px-2.5 py-1 rounded border ${
+                              className={`px-2.5 py-1 rounded border max-w-full break-all text-left ${
                                 selectedJwtPart === "header"
                                   ? "bg-rose-500 text-white border-rose-300 font-bold"
                                   : "bg-rose-950/40 text-rose-300 border-rose-500/30"
@@ -4930,7 +5530,7 @@
                             <span className="text-slate-500 font-bold">.</span>
                             <button
                               onClick={() => setSelectedJwtPart("payload")}
-                              className={`px-2.5 py-1 rounded border ${
+                              className={`px-2.5 py-1 rounded border max-w-full break-all text-left ${
                                 selectedJwtPart === "payload"
                                   ? "bg-purple-500 text-white border-purple-300 font-bold"
                                   : "bg-purple-950/40 text-purple-300 border-purple-500/30"
@@ -4941,7 +5541,7 @@
                             <span className="text-slate-500 font-bold">.</span>
                             <button
                               onClick={() => setSelectedJwtPart("signature")}
-                              className={`px-2.5 py-1 rounded border ${
+                              className={`px-2.5 py-1 rounded border max-w-full break-all text-left ${
                                 selectedJwtPart === "signature"
                                   ? "bg-sky-500 text-slate-950 border-sky-300 font-bold"
                                   : "bg-sky-950/40 text-sky-300 border-sky-500/30"
@@ -4950,7 +5550,7 @@
                               Qm3x8vZpL2tWc9eHkR4nYb0sJ7uAf1Dg...
                             </button>
                           </div>
-                          <div className="code-island p-2.5 rounded-lg bg-slate-900 border border-slate-800 font-mono text-xs text-slate-300">
+                          <div className="code-island p-2.5 rounded-lg bg-slate-900 border border-slate-800 font-mono text-xs text-slate-300 break-all">
                             {selectedJwtPart === "header" &&
                               'Header: { "alg": "RS256", "kid": "smart-key-1" } — Tells the verifier which key in jwks_uri signed this token.'}
                             {selectedJwtPart === "payload" &&
@@ -5200,7 +5800,7 @@
 
                   <div className="pt-4 border-t border-slate-800 flex items-center justify-between">
                     <button
-                      onClick={() => setSimStage((s) => Math.max(1, s - 1))}
+                      onClick={() => goToStage(Math.max(1, simStage - 1))}
                       disabled={simStage === 1}
                       className={`px-3.5 py-2 rounded-xl text-xs font-semibold flex items-center gap-1.5 ${
                         simStage === 1
@@ -5215,7 +5815,7 @@
                       Phase {simStage} / 4
                     </span>
                     <button
-                      onClick={() => setSimStage((s) => Math.min(4, s + 1))}
+                      onClick={() => goToStage(Math.min(4, simStage + 1))}
                       disabled={simStage === 4}
                       className={`px-4 py-2 rounded-xl text-xs font-bold flex items-center gap-1.5 ${
                         simStage === 4
@@ -5230,387 +5830,8 @@
                 </div>
 
                 {/* Right Column: Live HTTP Wire & Payload Inspector */}
-                <div className="code-island lg:col-span-5 bg-slate-950 border border-slate-800 rounded-2xl p-4 sm:p-5 flex flex-col justify-between font-mono text-xs space-y-4">
-                  <div className="space-y-4">
-                    <div className="flex items-center justify-between border-b border-slate-800 pb-3">
-                      <span className="font-sans text-xs font-bold text-slate-300 flex items-center gap-2">
-                        <KeyRound className="w-4 h-4 text-emerald-400" />
-                        Live HTTP Wire & Payload Inspector
-                      </span>
-                      <span className="px-2 py-0.5 rounded bg-slate-900 text-sky-300 border border-slate-800 text-xs">
-                        {launchMode === "ehr" ? "launch-ehr" : "launch-standalone"}
-                      </span>
-                    </div>
-
-                    <div className="space-y-1.5">
-                      <div className="text-xs font-sans font-semibold text-slate-400">
-                        {simStage <= 2
-                          ? "1. Outgoing Browser Request (authorization_endpoint)"
-                          : simStage === 3
-                          ? "2. Outgoing Back-Channel POST (token_endpoint)"
-                          : selectedSeqStepNum >= 16
-                          ? "3. Outgoing Refresh Token Grant (POST /smart/token)"
-                          : "3. Outgoing FHIR Resource Request"}
-                      </div>
-
-                      {simStage <= 2 && (
-                        <div className="p-3.5 rounded-xl bg-slate-900/90 border border-slate-800 space-y-1 text-sm leading-relaxed overflow-x-auto">
-                          <div>
-                            <span className="text-sky-400 font-bold">GET</span>{" "}
-                            <span className="text-white">/smart/authorize</span>{" "}
-                            <span className="text-slate-500">HTTP/1.1</span>
-                          </div>
-                          <div className="text-slate-400">
-                            Host: <span className="text-slate-200">api.mock.health</span>
-                          </div>
-                          <div className="pt-1 text-slate-300">
-                            ?response_type=<span className="text-emerald-300">code</span>
-                          </div>
-                          <div className="text-slate-300">
-                            &amp;client_id=<span className="text-emerald-300">{authUrlClientId}</span>
-                          </div>
-                          <div className="text-slate-300">
-                            &amp;redirect_uri=<span className="text-emerald-300">{authUrlRedirectUri}</span>
-                          </div>
-                          {launchMode === "ehr" && (
-                            <div className="text-indigo-200 bg-indigo-500/20 px-1.5 py-0.5 rounded border border-indigo-500/40 font-bold">
-                              &amp;launch=xyz987_opaque_ehr_context
-                            </div>
-                          )}
-                          <div className="text-slate-300 break-all">
-                            &amp;scope=<span className="text-amber-300">{simScopes.join("%20")}</span>
-                          </div>
-                          <div className="text-slate-300">
-                            &amp;state=<span className="text-emerald-300">{authUrlState}</span>
-                          </div>
-                          <div className="text-slate-300">
-                            &amp;aud=<span className="text-emerald-300">{authUrlAud}</span>
-                          </div>
-                          <div className="text-slate-300 break-all bg-sky-500/10 px-1.5 py-0.5 rounded border border-sky-500/20">
-                            &amp;code_challenge=<span className="text-sky-300 font-bold">{currentPkce.challenge}</span>
-                          </div>
-                          <div className="text-slate-300">
-                            &amp;code_challenge_method=<span className="text-sky-300 font-bold">S256</span>
-                          </div>
-                        </div>
-                      )}
-
-                      {simStage === 3 && (
-                        <div className="p-3.5 rounded-xl bg-slate-900/90 border border-slate-800 space-y-1 text-sm leading-relaxed overflow-x-auto">
-                          <div>
-                            <span className="text-emerald-400 font-bold">POST</span>{" "}
-                            <span className="text-white">/smart/token</span>{" "}
-                            <span className="text-slate-500">HTTP/1.1</span>
-                          </div>
-                          <div className="text-slate-400">
-                            Host: <span className="text-slate-200">api.mock.health</span>
-                          </div>
-                          <div className="text-slate-400">
-                            Content-Type: <span className="text-slate-200">application/x-www-form-urlencoded</span>
-                          </div>
-                          <div className="pt-2 border-t border-slate-800 mt-2 space-y-1">
-                            <div>grant_type=<span className="text-emerald-300">authorization_code</span></div>
-                            <div>&amp;code=<span className="text-amber-300 font-bold">{issuedAuthCode}</span></div>
-                            <div>&amp;client_id=<span className="text-emerald-300">{authUrlClientId}</span></div>
-                            <div>&amp;redirect_uri=<span className="text-emerald-300">{authUrlRedirectUri}</span></div>
-                            <div className={`p-1.5 rounded border break-all ${
-                              tamperMode === "valid"
-                                ? "bg-emerald-500/10 border-emerald-500/30 text-emerald-300"
-                                : "bg-rose-500/15 border-rose-500/40 text-rose-300"
-                            }`}>
-                              &amp;code_verifier=<span className="font-bold">{tamperMode === "valid" ? currentPkce.verifier : "ATTACKER_GUESSED_WRONG_VERIFIER_99999"}</span>
-                            </div>
-                          </div>
-                        </div>
-                      )}
-
-                      {simStage === 4 && selectedSeqStepNum >= 16 && (
-                        <div className="p-3.5 rounded-xl bg-slate-900/90 border border-emerald-500/40 space-y-1 text-sm leading-relaxed">
-                          <div>
-                            <span className="text-emerald-400 font-bold">POST</span>{" "}
-                            <span className="text-white">/smart/token</span>{" "}
-                            <span className="text-slate-500">HTTP/1.1</span>
-                          </div>
-                          <div className="text-slate-400">
-                            Host: <span className="text-slate-200">api.mock.health</span>
-                          </div>
-                          <div className="pt-2 border-t border-slate-800 mt-1 space-y-1">
-                            <div>grant_type=<span className="text-emerald-300 font-bold">refresh_token</span></div>
-                            <div>&amp;refresh_token=<span className="text-amber-300 font-bold">rt_live_88a9c0_gen{Math.max(1, tokenGeneration - 1)}</span></div>
-                            <div>&amp;client_id=<span className="text-sky-300">{authUrlClientId}</span></div>
-                          </div>
-                        </div>
-                      )}
-
-                      {simStage === 4 && selectedSeqStepNum < 16 && (
-                        <div className="p-3.5 rounded-xl bg-slate-900/90 border border-slate-800 space-y-1 text-sm leading-relaxed">
-                          <div>
-                            <span className="text-sky-400 font-bold">
-                              {fhirApiResult === "delete_obs" ? "DELETE" : "GET"}
-                            </span>{" "}
-                            <span className="text-white">
-                              {fhirApiResult === "delete_obs"
-                                ? "/fhir/Observation/hba1c-992"
-                                : "/fhir/Observation?patient=pat-mother-eleanor-456&code=4548-4"}
-                            </span>
-                          </div>
-                          <div className="text-slate-400">
-                            Host: <span className="text-slate-200">api.mock.health</span>
-                          </div>
-                          <div className={`break-all ${
-                            fhirApiResult === "wrong_id_token" || tokenExpired ? "text-rose-300" : "text-emerald-300"
-                          }`}>
-                            Authorization: Bearer{" "}
-                            {fhirApiResult === "wrong_id_token"
-                              ? "eyJraWQiOiJzbWFydC1rZXktMSIs... (ID_TOKEN_SENT_BY_MISTAKE)"
-                              : accessTokenFormat === "opaque"
-                              ? `st_live_opaque_gen${tokenGeneration}_99a8b7`
-                              : `eyJhbGciOiJSUzI1NiIsImdlbiI6${tokenGeneration}... (${
-                                  tokenExpired ? "EXPIRED_ACCESS_TOKEN" : "VALID_ACCESS_TOKEN"
-                                })`}
-                          </div>
-                        </div>
-                      )}
-                    </div>
-
-                    <div className="space-y-1.5">
-                      <div className="text-xs font-sans font-semibold text-slate-400">
-                        Server HTTP Response
-                      </div>
-
-                      {simStage <= 2 && (
-                        <div className="p-3.5 rounded-xl bg-slate-900/90 border border-slate-800 text-xs space-y-2">
-                          {!authCompleted ? (
-                            <div className="text-slate-400 font-sans">
-                              Waiting for {launchMode === "ehr" ? "EHR launch confirmation" : "portal sign-in"} at <code className="code-inline text-sky-300">/smart/authorize</code>... (Go to Phase 2 and click the green button).
-                            </div>
-                          ) : (
-                            <>
-                              <div className="text-emerald-400 font-bold">
-                                HTTP/1.1 302 Found (Step 8 Redirect)
-                              </div>
-                              <div className="text-slate-300 break-all">
-                                Location: https://app.example.org/callback?code=<span className="text-amber-300 font-bold">{issuedAuthCode}</span>&amp;state=<span className="text-sky-300">{authUrlState}</span>
-                              </div>
-                              <div className="p-2 rounded bg-emerald-950/40 border border-emerald-500/30 text-emerald-200 font-sans text-xs">
-                                ✓ Authorization code returned! Proceed to <strong>Phase 3 (<code className="code-inline">POST /smart/token</code>)</strong> to exchange it.
-                              </div>
-                            </>
-                          )}
-                        </div>
-                      )}
-
-                      {simStage === 3 && (
-                        <div className="p-3.5 rounded-xl bg-slate-900/90 border border-slate-800 text-xs space-y-2">
-                          {tokenExchangeResult === null && (
-                            <div className="text-slate-400 font-sans">
-                              Click <strong>"Execute POST /smart/token Exchange"</strong> on the left to inspect the {launchMode === "ehr" ? "EHR Launch" : "Standalone Launch"} token response.
-                            </div>
-                          )}
-                          {tokenExchangeResult === "error" && (
-                            <div className="space-y-2">
-                              <div className="text-rose-400 font-bold">
-                                HTTP/1.1 400 Bad Request (Failed at Step 10)
-                              </div>
-                              <pre className="code-island text-rose-300 whitespace-pre-wrap">
-                                {JSON.stringify(
-                                  {
-                                    error: "invalid_grant",
-                                    error_description:
-                                      "PKCE verification failed: S256(code_verifier) does not match stored code_challenge."
-                                  },
-                                  null,
-                                  2
-                                )}
-                              </pre>
-                            </div>
-                          )}
-                          {tokenExchangeResult === "success" && (
-                            <div className="space-y-2">
-                              <div className="text-emerald-400 font-bold">
-                                HTTP/1.1 200 OK (Step 11 • {launchMode === "ehr" ? "EHR Launch Response" : "Standalone Response"})
-                              </div>
-                              <pre className="code-island text-emerald-300 whitespace-pre-wrap overflow-x-auto">
-                                {JSON.stringify(
-                                  launchMode === "ehr"
-                                    ? {
-                                        access_token:
-                                          accessTokenFormat === "opaque"
-                                            ? `st_live_opaque_gen${tokenGeneration}_99a8b7`
-                                            : `eyJhbGciOiJSUzI1NiIsImtpZCI6InNtYXJ0LWtleS0xIiwiZ2VuIjoidj${tokenGeneration}ifQ...`,
-                                        token_type: "Bearer",
-                                        expires_in: 3600,
-                                        scope: grantedScopesList.join(" "),
-                                        patient: "pat-mother-eleanor-456",
-                                        encounter: "enc-ed-triage-8821",
-                                        need_patient_banner: false,
-                                        smart_style_url: "https://api.mock.health/smart/style.json",
-                                        id_token: "eyJraWQiOiJzbWFydC1rZXktMSIs... (fhirUser: Practitioner/dr-smith-101)",
-                                        ...(simScopes.includes("offline_access") || simScopes.includes("online_access")
-                                          ? { refresh_token: `rt_live_88a9c0_gen${tokenGeneration}` }
-                                          : {})
-                                      }
-                                    : {
-                                        access_token:
-                                          accessTokenFormat === "opaque"
-                                            ? `st_live_opaque_gen${tokenGeneration}_99a8b7`
-                                            : `eyJhbGciOiJSUzI1NiIsImtpZCI6InNtYXJ0LWtleS0xIiwiZ2VuIjoidj${tokenGeneration}ifQ...`,
-                                        token_type: "Bearer",
-                                        expires_in: 3600,
-                                        scope: grantedScopesList.join(" "),
-                                        patient: "pat-mother-eleanor-456",
-                                        id_token: "eyJraWQiOiJzbWFydC1rZXktMSIs... (fhirUser: RelatedPerson/john-caregiver-42)",
-                                        ...(simScopes.includes("offline_access")
-                                          ? { refresh_token: `rt_live_88a9c0_gen${tokenGeneration}` }
-                                          : {})
-                                      },
-                                  null,
-                                  2
-                                )}
-                              </pre>
-                            </div>
-                          )}
-                        </div>
-                      )}
-
-                      {simStage === 4 && (
-                        <div className="p-3.5 rounded-xl bg-slate-900/90 border border-slate-800 text-xs space-y-2">
-                          {selectedSeqStepNum >= 16 ? (
-                            <div className="space-y-1.5">
-                              <div className="text-emerald-400 font-bold">
-                                HTTP/1.1 200 OK (Step 18 Refresh Token Rotated!)
-                              </div>
-                              <pre className="code-island text-emerald-300 whitespace-pre-wrap">
-                                {JSON.stringify(
-                                  {
-                                    access_token: `eyJhbGciOiJSUzI1NiIsImdlbiI6InY${tokenGeneration}i...`,
-                                    token_type: "Bearer",
-                                    expires_in: 3600,
-                                    scope: grantedScopesList.join(" "),
-                                    patient: "pat-mother-eleanor-456",
-                                    refresh_token: `rt_live_88a9c0_gen${tokenGeneration}`
-                                  },
-                                  null,
-                                  2
-                                )}
-                              </pre>
-                            </div>
-                          ) : tokenExpired ? (
-                            <div className="space-y-1.5">
-                              <div className="text-rose-400 font-bold">
-                                HTTP/1.1 401 Unauthorized (Failed at Step 13 — Token Expired)
-                              </div>
-                              <div className="text-amber-300">
-                                WWW-Authenticate: Bearer error="invalid_token", error_description="The access token expired (exp claim is in the past)"
-                              </div>
-                              <pre className="code-island text-rose-300 whitespace-pre-wrap">
-                                {JSON.stringify(
-                                  {
-                                    resourceType: "OperationOutcome",
-                                    issue: [
-                                      {
-                                        severity: "error",
-                                        code: "expired",
-                                        diagnostics:
-                                          "Access token TTL (3600s) elapsed. Use your refresh_token at /smart/token (Steps 16-18) to obtain a new access_token."
-                                      }
-                                    ]
-                                  },
-                                  null,
-                                  2
-                                )}
-                              </pre>
-                            </div>
-                          ) : fhirApiResult === "wrong_id_token" ? (
-                            <div className="space-y-1.5">
-                              <div className="text-rose-400 font-bold">
-                                HTTP/1.1 401 Unauthorized (Mistake: ID token sent to the API)
-                              </div>
-                              <div className="text-amber-300">
-                                WWW-Authenticate: Bearer error="invalid_token", error_description="Not an access token for this server"
-                              </div>
-                              <pre className="code-island text-rose-300 whitespace-pre-wrap">
-                                {JSON.stringify(
-                                  {
-                                    error: "invalid_token",
-                                    error_description:
-                                      "Token validation failed at Step 13: Audience ('aud': 'john-graph-app') does not match FHIR Resource Server ('https://api.mock.health/fhir') and token contains no 'scope' claim. Never send an id_token as a Bearer token!"
-                                  },
-                                  null,
-                                  2
-                                )}
-                              </pre>
-                            </div>
-                          ) : fhirApiResult === "ui_access_token_mistake" ? (
-                            <div className="space-y-1.5">
-                              <div className="text-amber-400 font-bold">
-                                App UI Warning (Mistake: reading the access token for identity)
-                              </div>
-                              <p className="text-slate-300 font-sans">
-                                Access tokens are meant for the <strong>FHIR Resource Server</strong>, not for the client app to identify the logged-in user! If the server issues an <strong>Opaque Access Token</strong> (<code className="code-inline">st_live_opaque...</code>), your app cannot decode it at all. Always read user identity (<code className="code-inline">fhirUser</code>, <code className="code-inline">name</code>) from the <strong><code className="code-inline">id_token</code></strong>.
-                              </p>
-                            </div>
-                          ) : fhirApiResult === "delete_obs" ? (
-                            <div className="space-y-1.5">
-                              <div className="text-rose-400 font-bold">
-                                HTTP/1.1 403 Forbidden (Insufficient Scope at Step 13)
-                              </div>
-                              <div className="text-rose-300">WWW-Authenticate: Bearer error="insufficient_scope", scope="patient/Observation.cruds"</div>
-                              <pre className="code-island text-rose-300 whitespace-pre-wrap">
-                                {JSON.stringify(
-                                  {
-                                    resourceType: "OperationOutcome",
-                                    issue: [
-                                      {
-                                        severity: "error",
-                                        code: "forbidden",
-                                        diagnostics:
-                                          "Access token granted 'patient/Observation.rs' (read/search only). 'd' (delete) permission was not granted."
-                                      }
-                                    ]
-                                  },
-                                  null,
-                                  2
-                                )}
-                              </pre>
-                            </div>
-                          ) : (
-                            <div className="space-y-1.5">
-                              <div className="text-emerald-400 font-bold">
-                                HTTP/1.1 200 OK (Step 14 • Generation #{tokenGeneration} Token Verified)
-                              </div>
-                              <pre className="code-island text-emerald-300 whitespace-pre-wrap">
-                                {JSON.stringify(
-                                  {
-                                    resourceType: "Bundle",
-                                    type: "searchset",
-                                    total: 1,
-                                    entry: [
-                                      {
-                                        resource: {
-                                          resourceType: "Observation",
-                                          id: "hba1c-992",
-                                          subject: { reference: "Patient/pat-mother-eleanor-456" },
-                                          encounter:
-                                            launchMode === "ehr"
-                                              ? { reference: "Encounter/enc-ed-triage-8821" }
-                                              : undefined,
-                                          code: { text: "Hemoglobin A1c" },
-                                          valueQuantity: { value: 6.8, unit: "%" }
-                                        }
-                                      }
-                                    ]
-                                  },
-                                  null,
-                                  2
-                                )}
-                              </pre>
-                            </div>
-                          )}
-                        </div>
-                      )}
-                    </div>
-                  </div>
+                <div className="code-island hidden lg:flex lg:col-span-5 bg-slate-950 border border-slate-800 rounded-2xl p-4 sm:p-5 flex flex-col justify-between font-mono text-xs space-y-4">
+                  {renderInspector()}
                 </div>
               </div>
 
@@ -5768,7 +5989,7 @@
                     GET /smart/authorize Generated Query URL:
                   </div>
                   <div>
-                    <span className="text-emerald-400 font-bold">https://api.mock.health/smart/authorize</span>
+                    <span className="text-emerald-400 font-bold break-all">https://api.mock.health/smart/authorize</span>
                   </div>
                   <div className="pl-4 text-slate-300">
                     ?response_type=<span className="text-amber-300 font-bold">code</span>
@@ -5807,6 +6028,43 @@
 
               <DeeperLinks ids={["devtools", "errors", "mistakes", "real-launch"]} />
             </main>
+          )}
+
+          {/* Phones: the Live HTTP Wire stays pinned to the bottom of Watch the Flow.
+              It lights up when a choice changes the request or the response; tap it for the full panel. */}
+          {activeTab === "simulator" && (
+            <>
+              {wireOpen && (
+                <div className="lg:hidden fixed inset-0 z-30 bg-black/40" onClick={() => setWireOpen(false)} aria-hidden="true" />
+              )}
+              <div className="lg:hidden fixed inset-x-0 bottom-0 z-40">
+                {wireOpen && (
+                  <div id="wire-sheet" className="code-island max-h-[70vh] overflow-y-auto border-t border-slate-700 bg-slate-950 p-4 font-mono text-xs">
+                    {renderInspector()}
+                  </div>
+                )}
+                <Lit watch={wireRequest + wireStatus + wireResKey} className="bg-slate-950">
+                  <button
+                    type="button"
+                    onClick={() => setWireOpen((o) => !o)}
+                    aria-expanded={wireOpen}
+                    aria-controls="wire-sheet"
+                    className="code-island w-full flex items-center justify-between gap-3 px-4 py-3 border-t border-slate-700 text-left"
+                  >
+                    <span className="min-w-0">
+                      <span className="block font-sans text-xs font-semibold text-slate-400">Live HTTP Wire</span>
+                      <span className="block font-mono text-xs text-slate-200 truncate">
+                        {wireRequest} &rarr;{" "}
+                        <span className={wireFailed ? "text-rose-300 font-bold" : wireStatus.startsWith("2") || wireStatus.startsWith("3") ? "text-emerald-300 font-bold" : "text-slate-400"}>
+                          {wireStatus}
+                        </span>
+                      </span>
+                    </span>
+                    <span className="shrink-0 font-sans text-xs font-semibold text-sky-300">{wireOpen ? "Close" : "Open"}</span>
+                  </button>
+                </Lit>
+              </div>
+            </>
           )}
 
           {/* TAB 3: TOKEN DEEP-DIVE LAB (id: "tokens", amber theme) */}
@@ -6007,7 +6265,7 @@
                     <div className="font-bold text-slate-300">
                       1. Decoded <code className="code-inline">id_token</code> Payload with <code className="code-inline">fhirUser</code> Highlighted:
                     </div>
-                    <div className="code-island p-3 rounded-lg bg-slate-900 border border-slate-800 font-mono text-sm leading-relaxed space-y-1">
+                    <div className="code-island p-3 rounded-lg bg-slate-900 border border-slate-800 font-mono text-sm leading-relaxed space-y-1 break-all">
                       <div>{"{"}</div>
                       <div className="pl-4 text-slate-400">"iss": "https://api.mock.health",</div>
                       <div className="pl-4 text-slate-400">"sub": "{fhirUserLaunchMode === "ehr" ? "practitioner-dr-smith-101" : "user-john-caregiver-42"}",</div>
@@ -6023,7 +6281,7 @@
                     <div className="font-bold text-slate-300 pt-1">
                       2. How the App Extracts the <code className="code-inline">fhirUser</code> URI:
                     </div>
-                    <pre className="code-island p-3 rounded-lg bg-slate-900 border border-slate-800 font-mono text-xs text-emerald-300 whitespace-pre-wrap">
+                    <pre className="code-island p-3 rounded-lg bg-slate-900 border border-slate-800 font-mono text-xs text-emerald-300 whitespace-pre-wrap break-all">
                       {`// 1. Verify the id_token's signature, then read its claims
 const { payload } = await jwtVerify(tokenResponse.id_token, jwks, { issuer, audience: clientId });
 
