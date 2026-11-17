@@ -1,6 +1,6 @@
 # SMART on FHIR Interactive Lab
 
-### [Open the lab](https://burroclurse.github.io/SMART-on-FHIR-Interactive-Discovery-OAuth-2.0-Lab/)
+### [Open the lab](https://burroclurse.github.io/SMART-on-FHIR-Interactive-Lab/)
 
 How a health app finds a server, asks permission, and gets its tokens. A free, hands-on lab for people new to **SMART on FHIR**: discovery (`/.well-known/smart-configuration`), SMART v1/v2 scopes, OAuth 2.0 with PKCE (`S256`), standalone vs. EHR launch, and `id_token` vs. `access_token` vs. patient context.
 
@@ -52,7 +52,7 @@ Reference sections, collapsed until opened. The other four tabs link straight to
 
 The whole lab is one HTML file (`index.html`) with no build step. It loads React 18, Tailwind CSS and Babel Standalone from a CDN.
 
-1. **Online:** open the [live lab](https://burroclurse.github.io/SMART-on-FHIR-Interactive-Discovery-OAuth-2.0-Lab/).
+1. **Online:** open the [live lab](https://burroclurse.github.io/SMART-on-FHIR-Interactive-Lab/).
 2. **On your computer:** download `index.html` (or use the download button at the bottom of the lab) and open it in any modern browser.
 3. **Your own copy:** click **Fork** on GitHub, edit `index.html`, and turn on GitHub Pages in your fork's settings.
 
