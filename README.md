@@ -9,7 +9,7 @@ An open-source, self-contained interactive learning workbench for mastering **SM
 ## What's Inside
 
 ### 1. 10-Step Guided Discovery & Scopes Lab
-* Interactive walkthrough paired with a live, searchable `/.well-known/smart-configuration` JSON inspector (`642` advertised scopes across `patient/`, `user/`, and `system/`).
+* Interactive walkthrough paired with a live, searchable `/.well-known/smart-configuration` JSON inspector (`636` advertised scopes across `patient/`, `user/`, and `system/`).
 * Interactive SMART v2 scope anatomy decoder (`patient/Observation.rs` vs. `patient/Observation.cruds`) and caregiver proxy scenarios.
 * Opens on an overview of the ten steps, with quick checks along the way and a 10-question final assessment.
 
