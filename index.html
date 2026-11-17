@@ -277,7 +277,7 @@
     const ChevronUp = makeIcon(<path d="m18 15-6-6-6 6"/>);
     const CheckCheck = makeIcon(<><path d="M18 6 7 17l-5-5"/><path d="m22 10-7.5 7.5L13 16"/></>);
 
-    // Dynamically generate all 642 scopes from the SMART configuration JSON
+    // Generate the 636 scopes the mock server advertises (6 + 3 contexts x 30 resources x 7 endings)
     const FHIR_RESOURCES = [
       "*", "Patient", "Observation", "Condition", "Encounter", "MedicationRequest",
       "Procedure", "DiagnosticReport", "ImagingStudy", "DocumentReference",
@@ -289,7 +289,7 @@
 
     const PERM_SUFFIXES = ["read", "write", "rs", "cruds", "crs", "crd", "crds"];
 
-    const FULL_642_SCOPES = [
+    const ALL_SCOPES = [
       "openid", "profile", "fhirUser", "offline_access", "launch", "launch/patient",
       ...["patient", "user", "system"].flatMap((ctx) =>
         FHIR_RESOURCES.flatMap((res) =>
@@ -330,7 +330,7 @@
         "refresh_token",
         "client_credentials"
       ],
-      scopes_supported: FULL_642_SCOPES,
+      scopes_supported: ALL_SCOPES,
       response_types_supported: ["code"],
       token_endpoint_auth_methods_supported: [
         "client_secret_basic",
@@ -359,16 +359,16 @@
     ];
 
     const FIELD_TOOLTIPS = {
-      issuer: "The URL of the authorization server issuing tokens.",
+      issuer: "The server's OpenID Connect issuer URL. It must match the iss claim in the id_token.",
       jwks_uri: "Public cryptographic keys used by apps to verify digital signatures on JWT tokens (like id_token).",
       authorization_endpoint: "Where the app redirects the user's browser to sign in and approve access.",
-      token_endpoint: "Back-channel URL where the app exchanges an authorization code + PKCE verifier for an access token.",
+      token_endpoint: "Back-channel URL where the app trades an authorization code (plus its PKCE verifier) for tokens. Refresh and backend-service requests go here too.",
       introspection_endpoint: "Endpoint used by resource servers to check if a token is still active.",
       revocation_endpoint: "Endpoint allowing an app to invalidate a token when a user logs out.",
       capabilities: "List of SMART on FHIR features supported by this server (launch modes, client types, context, v1/v2 permissions).",
       code_challenge_methods_supported: "Supported hashing methods for PKCE. S256 means SHA-256 hashing.",
       grant_types_supported: "OAuth 2.0 workflows supported to obtain tokens (authorization_code, refresh_token, client_credentials).",
-      scopes_supported: "All permission strings advertised by the server (identity, launch context, and FHIR resource access).",
+      scopes_supported: "Permission strings the server advertises (identity, launch context, and FHIR resource access). The spec says this list may not be complete.",
       response_types_supported: "Indicates the authorization endpoint returns an authorization 'code'.",
       token_endpoint_auth_methods_supported: "How clients authenticate at the token endpoint ('none' for public apps using PKCE, or secrets/JWTs for confidential apps)."
     };
@@ -414,7 +414,7 @@
         coreTakeaway: "Different pieces, different jobs: Authorization determines permitted access, identity information helps the app recognize the signed-in user, and patient context identifies whose records the connection concerns.",
         summary: "Follows what happens behind the scenes when John connects his app, from signing in at the authorization_endpoint to exchanging the code at the token_endpoint with PKCE. Introduces OpenID Connect and clarifies the distinct jobs of Access Tokens, ID Tokens, and Patient Context.",
         connections: [
-          "OAuth 2.0 Authorization Code + PKCE (S256): The app sends a SHA-256 code_challenge to /authorize, and proves its identity at /token by sending the original code_verifier.",
+          "OAuth 2.0 Authorization Code + PKCE (S256): The app sends a SHA-256 code_challenge to /authorize, then sends the original code_verifier to /token to prove it is the same app that started the sign-in.",
           "Access Token's Job: Sent to the FHIR server to request permitted clinical data.",
           "ID Token's Job (OpenID Connect): Conveys who signed in (via openid and fhirUser)—for example, John signing in with his caregiver account.",
           "Patient Context's Job: Identifies whose medical records the connection concerns (e.g., John's mother via launch/patient)."
@@ -424,15 +424,15 @@
         id: 4,
         deeper: ["vendors", "backend", "bulk"],
         number: "Concept Video 4",
-        plain: ["Real systems from Epic and Oracle Health follow the same pattern you have just seen. What changes is where the connection starts.", "In a standalone launch, the app starts on its own, like John opening an app on his phone. He signs in and picks whose records to connect.", "In an EHR launch, the app starts inside the hospital's record system. A clinician already has a chart open, so the EHR hands the app a launch token and the patient is known without asking.", "A backend service has no person signing in at all. One server talks to another and proves who it is with a signed key, for jobs such as nightly reports.", "Two different files describe a server: `/metadata` lists what health data it holds, and `/.well-known/smart-configuration` lists how to get permission."],
+        plain: ["Real systems from Epic and Oracle Health follow the same pattern you have just seen. What changes is where the connection starts.", "In a standalone launch, the app starts on its own, like John opening an app on his phone. He signs in and picks whose records to connect.", "In an EHR launch, the app starts inside the health system's own software, such as a clinician's open chart or a patient portal like MyChart. The person is already signed in there, so the EHR hands the app a launch token and the patient is usually known without asking.", "A backend service has no person signing in at all. One server talks to another and proves who it is with a signed key, for jobs such as nightly reports.", "Two different files describe a server: `/metadata` lists what the FHIR server can do (resource types, searches, operations), and `/.well-known/smart-configuration` lists how to get permission."],
         title: "Real-World Flowcharts: Epic, Oracle Health & Launch Patterns",
         loomUrl: "https://www.loom.com/share/5e754a8a98d946d295b0893c7fb9fbf8",
         coreTakeaway: "Recognizing shared patterns: Understanding the fundamentals helps you interpret different workflows, follow technical documentation, and investigate connection problems.",
         summary: "Applies the fundamentals to publicly documented flowcharts from Epic and Oracle Health. Walks through standalone launch, EHR launch, and a backend service using the client credentials flow—comparing where each connection begins, how it obtains access, and how CapabilityStatement differs from SMART Discovery.",
         connections: [
           "Standalone Launch (`launch-standalone`): Begins outside the EHR (e.g., John's mobile phone app) and uses `launch/patient` to establish patient context.",
-          "EHR Launch (`launch-ehr`): Begins inside a clinician's EHR session (Epic/Oracle Health passes a `launch` context token to the app).",
-          "Backend Service (`client_credentials`): Server-to-server automated workflow with no human signing in during token exchange (`system/*.rs`).",
+          "EHR Launch (`launch-ehr`): Begins inside an EHR or patient portal session, for a clinician or a patient (Epic/Oracle Health passes a `launch` context token to the app).",
+          "Backend Service (`client_credentials` grant): Not a launch. A server-to-server workflow with no person signing in at all (`system/*.rs`).",
           "Two Separate Discovery Documents: FHIR CapabilityStatement (/metadata) describes clinical FHIR resources/profiles, while SMART Discovery (/.well-known/smart-configuration) describes OAuth 2.0 authorization endpoints."
         ]
       }
@@ -476,7 +476,7 @@
         title: "Workflow, PKCE & Grant Types",
         subtitle: "Launch capabilities, S256 PKCE challenges, and token grant options",
         videoRef: "PKCE Security & Launch Patterns",
-        videoTakeaway: "Epic and Oracle Health flowcharts illustrate Standalone Launch (launch-standalone), EHR Launch (launch-ehr), and Backend Services (client_credentials)—while PKCE (S256) protects the authorization code exchange.",
+        videoTakeaway: "Epic and Oracle Health flowcharts illustrate Standalone Launch (launch-standalone), EHR Launch (launch-ehr), and Backend Services (the client_credentials grant, with no user)—while PKCE (S256) protects the authorization code exchange.",
         highlightKeys: [
           "capabilities",
           "code_challenge_methods_supported",
@@ -502,7 +502,7 @@
         title: "Explore scopes_supported",
         subtitle: "Understanding the server's advertised permission array",
         videoRef: "Scopes Define Permissions",
-        videoTakeaway: "Scopes describe the specific permissions an app requests. In JSON, square brackets [ ... ] hold an array of every scope string the server advertises.",
+        videoTakeaway: "Scopes describe the specific permissions an app requests. In JSON, square brackets [ ... ] hold an array of the scope strings the server advertises. The spec says servers may support more than they list.",
         highlightKeys: ["scopes_supported"],
         highlightScopes: [
           "openid",
@@ -663,7 +663,7 @@
           viaProxy: true,
           label: "1. Download SMART Discovery (/.well-known/smart-configuration)",
           detail:
-            "The FHIR App sends an HTTP GET request through the Reverse Proxy (•) to read `authorization_endpoint`, `token_endpoint`, `capabilities`, and `code_challenge_methods_supported` (S256). Epic's diagram calls this downloading the FHIR conformance statement: older servers listed these addresses in the CapabilityStatement at `/metadata`, and SMART 2 servers publish this discovery file."
+            "The FHIR App sends an HTTP GET request through the Reverse Proxy (•) to read `authorization_endpoint`, `token_endpoint`, `capabilities`, and `code_challenge_methods_supported` (S256). Epic's diagram calls this downloading the FHIR conformance statement. Servers once also listed these addresses in the CapabilityStatement at `/metadata` (now deprecated). The discovery file has been the standard place since SMART 1.0."
         },
         {
           num: 2,
@@ -675,7 +675,7 @@
             ? "2. Request OAuth2 auth (/smart/authorize?scope=launch...&launch=xyz987)"
             : "2. Request OAuth2 auth (/smart/authorize?scope=launch/patient...)",
           detail: isEhr
-            ? "App sends `scope=launch openid fhirUser...` PLUS `&launch=xyz987_opaque_ehr_context` so the Auth Server links this request to Dr. Smith's active EHR chart session."
+            ? "App sends `scope=launch openid fhirUser online_access...` PLUS `&launch=xyz987_opaque_ehr_context` so the Auth Server links this request to Dr. Smith's active EHR chart session. `online_access` asks for a refresh token that works while Dr. Smith stays signed in."
             : "App sends `scope=launch/patient openid fhirUser...` (no `launch=` token, because no EHR session exists yet) along with the PKCE `S256` `code_challenge`."
         },
         {
@@ -685,10 +685,10 @@
           to: 2,
           viaProxy: false,
           label: isEhr
-            ? "3. Redirect browser to EHR SSO / Session Context Handler"
+            ? "3. Browser reaches the EHR's sign-in check (no login screen)"
             : "3. Redirect user's browser to Patient Portal",
           detail: isEhr
-            ? "Auth Server directs the embedded/browser session to verify the active EHR clinician session."
+            ? "The authorize request runs in the EHR's embedded browser, so the Auth Server can see Dr. Smith's existing EHR session. Epic's own EHR diagram (steps 0–11) folds this and steps 4–6 into one arrow."
             : "Auth Server redirects John's browser to the provider's Patient Portal login screen."
         },
         {
@@ -756,7 +756,7 @@
           viaProxy: true,
           label: "9. Redeem OAuth2 auth code + PKCE code_verifier for access token",
           detail:
-            "Back-channel POST to `/smart/token`: App sends `grant_type=authorization_code`, `code`, and its secret `code_verifier` through the Reverse Proxy (•)."
+            "Back-channel POST to `/smart/token`: App sends `grant_type=authorization_code`, `code`, `redirect_uri`, its `client_id` (a public app has no secret), and its secret `code_verifier` through the Reverse Proxy (•)."
         },
         {
           num: 10,
@@ -767,7 +767,7 @@
           bidirectional: true,
           label: "10. Verify auth code + S256(code_verifier) and issue tokens",
           detail:
-            "Auth Server & DB check that `SHA256(code_verifier) === code_challenge`. If valid, it signs the `id_token`, mints the `access_token` (and `refresh_token`), and attaches launch context."
+            "Auth Server & DB check that `BASE64URL(SHA256(code_verifier)) === code_challenge`. If valid, it signs the `id_token`, mints the `access_token` (and `refresh_token`), and attaches launch context."
         },
         {
           num: 11,
@@ -776,11 +776,11 @@
           to: 1,
           viaProxy: false,
           label: isEhr
-            ? "11. Return access_token, id_token, patient, encounter & need_patient_banner:false"
+            ? "11. Return access_token, id_token, refresh_token, patient, encounter & need_patient_banner:false"
             : "11. Return access_token, id_token, refresh_token & patient context to App",
           detail: isEhr
-            ? "EHR Launch response includes `patient`, `encounter`, `need_patient_banner: false` (EHR already shows the top patient banner!), and `smart_style_url`."
-            : "Standalone response includes `access_token`, `id_token` (John), `refresh_token`, and `patient: 'pat-mother-eleanor-456'` (with `need_patient_banner: true`)."
+            ? "EHR Launch response includes a `refresh_token` (from `online_access`), `patient`, `encounter`, `need_patient_banner: false` (EHR already shows the top patient banner!), and `smart_style_url`."
+            : "Standalone response includes `access_token`, `id_token` (John), `refresh_token`, and `patient: 'pat-mother-eleanor-456'`. There is no `need_patient_banner`: it only applies to EHR launches."
         },
         {
           num: 12,
@@ -822,7 +822,7 @@
           label: "15. Display HbA1c graph & appropriate patient banner to user",
           detail: isEhr
             ? "App renders the graph inside the EHR frame using `smart_style_url` colors and hides its own patient banner (`need_patient_banner: false`)."
-            : "App renders Eleanor's top demographic banner (`need_patient_banner: true`) and displays her HbA1c trend graph to John."
+            : "App renders its own banner for Eleanor (a standalone app always does, since no EHR is showing one) and displays her HbA1c trend graph to John."
         },
         {
           num: 16,
@@ -832,7 +832,7 @@
           viaProxy: true,
           label: "16. [Renewal] POST /smart/token (grant_type=refresh_token)",
           detail:
-            "When the `access_token` expires after 3600s, the App sends its `refresh_token` (`offline_access`) to `/smart/token` without interrupting the user. In Epic, refresh tokens go only to confidential apps (apps with their own server) registered with 'Requires Persistent Access'."
+            "When the `access_token` expires after 3600s, the App sends its `refresh_token` to `/smart/token` without interrupting the user. It got that token from `offline_access` (standalone) or `online_access` (EHR launch). Epic issues refresh tokens only to confidential clients: an app with its own server, or a phone or browser app that registers its own key."
         },
         {
           num: 17,
@@ -935,7 +935,7 @@
       "client-confidential-asymmetric": {
         name: "Confidential Asymmetric (JWT)",
         category: "Client Authentication",
-        desc: "Supports backend server apps authenticating via private_key_jwt with signed RSA/ECDSA assertions (RFC 7523).",
+        desc: "Supports confidential apps (user-facing apps with a server, and backend services) authenticating via private_key_jwt with signed RSA/ECDSA assertions (RFC 7523).",
         epic: true,
         oracle: true
       },
@@ -998,7 +998,7 @@
       "permission-v2": {
         name: "SMART v2 Granular Scopes",
         category: "Permissions",
-        desc: "Supports SMART v2 granular action letters (e.g. '.rs' for read/search, '.cruds' for full lifecycle). Epic supports v2 scope syntax from its November 2024 version.",
+        desc: "Supports SMART v2 granular action letters (e.g. '.rs' for read/search, '.cruds' for full lifecycle). Epic accepts v2 scope syntax as well as v1.",
         epic: true,
         oracle: true
       },
@@ -1012,7 +1012,7 @@
       "authorize-post": {
         name: "Authorize via POST",
         category: "Protocol",
-        desc: "Allows the client to send the authorization request parameters in an HTTP POST body instead of URL query string. Epic allows this for EHR launches only, not standalone launches.",
+        desc: "Allows the client to send the authorization request parameters in an HTTP POST body instead of URL query string.",
         epic: true,
         oracle: true
       },
@@ -1026,14 +1026,14 @@
       "permission-online": {
         name: "Online Access (Refresh Tokens)",
         category: "Permissions",
-        desc: "Supports the 'online_access' scope: a refresh token that keeps working only while the user is still signed in to the EHR.",
+        desc: "Supports the 'online_access' scope: a refresh token that keeps working only while the user is still signed in to the EHR. Epic's sandbox discovery file does not list it, which is not the same as Epic never supporting it.",
         epic: false,
         oracle: true
       },
       "health-cards": {
         name: "SMART Health Cards",
         category: "Protocol",
-        desc: "Supports issuing SMART Health Cards: signed, verifiable records such as immunizations, outside the launch flow this lab teaches.",
+        desc: "Supports issuing SMART Health Cards: signed, verifiable records such as immunizations, outside the launch flow this lab teaches. Epic's sandbox discovery file does not list it, which is not the same as Epic never supporting it.",
         epic: false,
         oracle: true
       }
@@ -1099,7 +1099,7 @@
         why: "Developers think PKCE is optional or rely only on client_id for public apps.",
         impact: "On mobile and desktop operating systems, malicious local apps can register custom URI schemes (e.g. myapp://callback) to intercept authorization codes and steal patient access.",
         codeBad: '// ❌ WRONG (SMART v1 without PKCE)\nconst url = `${authEndpoint}?response_type=code&client_id=${clientId}&redirect_uri=${uri}`;',
-        codeGood: '// ✅ CORRECT (PKCE S256)\nconst url = `${authEndpoint}?response_type=code&client_id=${clientId}&code_challenge=${s256Challenge}&code_challenge_method=S256`;'
+        codeGood: '// ✅ CORRECT (PKCE S256, every required parameter)\nconst url = `${authEndpoint}?response_type=code&client_id=${clientId}&redirect_uri=${uri}&scope=${scope}&state=${state}&aud=${fhirBase}&code_challenge=${s256Challenge}&code_challenge_method=S256`;'
       },
       {
         id: 7,
@@ -1143,7 +1143,7 @@
         status: "200 OK",
         type: "fetch",
         url: "https://api.mock.health/smart/token",
-        desc: "This request happens in the background from your app to the token endpoint. Click on it in Network, select the 'Payload' tab, and verify grant_type=authorization_code, code, and code_verifier are passed in form-urlencoded format."
+        desc: "This request happens in the background from your app to the token endpoint. Click on it in Network, select the 'Payload' tab, and verify grant_type=authorization_code, code, redirect_uri, client_id (for a public app) and code_verifier are passed in form-urlencoded format."
       },
       {
         step: 4,
@@ -1198,8 +1198,9 @@
         id: "expired_token",
         title: "3. Expired Access Token to FHIR API",
         sub: "TTL 3600s Elapsed",
-        request: "GET /fhir/Observation?patient=pat-456\nAuthorization: Bearer eyJhbGciOi... (exp claim was 10 mins ago)",
+        request: "GET /fhir/Observation?patient=pat-456\nAuthorization: Bearer eyJhbGciOi... (exp claim was 60 mins ago)",
         status: "401 Unauthorized",
+        header: 'WWW-Authenticate: Bearer error="invalid_token", error_description="The access token expired"',
         response: {
           resourceType: "OperationOutcome",
           issue: [{
@@ -1217,6 +1218,7 @@
         sub: "Identity Token Misuse at FHIR Resource Server",
         request: "GET /fhir/Observation?patient=pat-456\nAuthorization: Bearer <id_token>",
         status: "401 Unauthorized",
+        header: 'WWW-Authenticate: Bearer error="invalid_token", error_description="Not an access token for this server"',
         response: {
           error: "invalid_token",
           error_description: "Audience mismatch: aud='john-graph-app' is a client_id, not this FHIR server, and token lacks 'scope' claim. id_token cannot be used as Bearer token."
@@ -1293,7 +1295,7 @@
       { term: "Bearer", category: "Tokens", def: "An HTTP Authorization scheme (RFC 6750). The header 'Authorization: Bearer <access_token>' tells the FHIR server to grant access to 'whoever bears (carries) this token'. Always requires HTTPS.", example: "Authorization: Bearer eyJhbGciOiJSUzM4NCJ9..." },
       { term: "opaque token", category: "Tokens", def: "An access_token that is a random, server-side reference string (e.g. 'st_live_99a8b7c6...') with no readable payload. The FHIR server must call the introspection_endpoint to validate it. Contrast with JWT.", example: "st_live_99a8f3c2b1d0e4f5   (means nothing to the app)" },
       // ── OAuth Parameters & Claims ──────────────────────────────────────────
-      { term: "aud", category: "OAuth / Claims", def: "Audience. In authorization requests, the aud parameter specifies the target FHIR server URL the access_token should be scoped to. In JWT payloads, the aud claim identifies which system(s) should accept this token. Epic has required aud since its May 2023 version; for standalone launches, only when launch/patient or launch/encounter is requested.", example: "&aud=https%3A%2F%2Fapi.mock.health%2Ffhir" },
+      { term: "aud", category: "OAuth / Claims", def: "Audience. In authorization requests, the aud parameter specifies the target FHIR server URL the access_token should be scoped to. In JWT payloads, the aud claim identifies which system(s) should accept this token. SMART 2 requires it on every authorization request.", example: "&aud=https%3A%2F%2Fapi.mock.health%2Ffhir" },
       { term: "code_challenge", category: "OAuth / Claims", def: "The hashed, public half of the PKCE pair. Computed as BASE64URL(SHA256(code_verifier)) and sent with the authorization request. Safe to transmit in the URL because SHA-256 is a one-way function.", example: "&code_challenge=E9Melhoa2OwvFrEMTJguCHaoeK1t8URWbuGJSstw-cM" },
       { term: "code_verifier", category: "OAuth / Claims", def: "The secret, random string (43–128 chars) generated by the app before the authorization request. Kept in app memory and sent to the token_endpoint. The server hashes it to verify it matches the earlier code_challenge.", example: "&code_verifier=dBjftJeZ4CVP-mB92K27uhbUJU1p1r_wW1gFWFOEjXk" },
       { term: "grant_type", category: "OAuth / Claims", def: "Specifies which OAuth 2.0 workflow is being used in a token request. SMART supports: authorization_code (user-facing flows), refresh_token (renewal), and client_credentials (backend services).", example: "grant_type=authorization_code\ngrant_type=refresh_token\ngrant_type=client_credentials" },
@@ -1306,10 +1308,10 @@
       // ── JWT Claims ─────────────────────────────────────────────────────────
       { term: "exp", category: "JWT Claims", def: "Expiration Time. Unix timestamp (seconds since 1970-01-01T00:00:00Z) after which the token must be rejected. Typically iat + 3600 for SMART access_tokens.", example: "\"exp\": 1740003600   (seconds since 1 Jan 1970)" },
       { term: "iat", category: "JWT Claims", def: "Issued At. Unix timestamp when the authorization server created the JWT. Used to calculate token age and validate that it was recently issued.", example: "\"iat\": 1740000000" },
-      { term: "kid", category: "JWT Claims", def: "Key ID. A hint in the JWT header identifying which key in the JWKS was used to sign this token. Apps look up the matching key in the jwks_uri response to verify the signature.", example: "\"kid\": \"smart-key-1\"" },
-      { term: "sub", category: "JWT Claims", def: "Subject. A stable, unique identifier for the authenticated user or entity within the issuer's identity namespace. Never contains PHI.", example: "\"sub\": \"user-john-caregiver-42\"" },
+      { term: "kid", category: "JWT Claims", def: "Key ID. Not a claim: a parameter in the JWT header, identifying which key in the JWKS was used to sign this token. Apps look up the matching key in the jwks_uri response to verify the signature.", example: "\"kid\": \"smart-key-1\"" },
+      { term: "sub", category: "JWT Claims", def: "Subject. A stable, unique identifier for the authenticated user or entity within the issuer's identity namespace. It should be opaque, so it does not reveal who the person is.", example: "\"sub\": \"user-john-caregiver-42\"" },
       // ── Scopes ─────────────────────────────────────────────────────────────
-      { term: "fhirUser", category: "Scopes & Identity", def: "When requested alongside openid, the authorization server includes a fhirUser claim in the id_token pointing to the signed-in user's FHIR resource (e.g. 'Practitioner/dr-smith-101').", example: "\"fhirUser\": \"https://api.mock.health/fhir/RelatedPerson/john-42\"" },
+      { term: "fhirUser", category: "Scopes & Identity", def: "When requested alongside openid, the authorization server includes a fhirUser claim in the id_token pointing to the signed-in user's FHIR resource (e.g. 'Practitioner/dr-smith-101').", example: "\"fhirUser\": \"https://api.mock.health/fhir/RelatedPerson/john-caregiver-42\"" },
       { term: "launch", category: "Scopes & Identity", def: "An EHR Launch scope. Tells the authorization server that the app was launched from inside the EHR and that the launch= context token should be used to bind the authorization to the active patient/encounter.", example: "&launch=xyz987_opaque_ehr_context" },
       { term: "launch/patient", category: "Scopes & Identity", def: "A Standalone Launch scope. Requests that the authorization server prompt the user to select a patient from the portal, returning the chosen patient ID in the token response as the 'patient' context value.", example: "request:  scope=launch/patient openid fhirUser\nresponse: \"patient\": \"pat-mother-eleanor-456\"" },
       { term: "offline_access", category: "Scopes & Identity", def: "When granted, the token response includes a refresh_token enabling the app to silently renew access_tokens without user interaction after they expire. Essential for long-running clinical apps.", example: "scope=launch/patient openid fhirUser offline_access" },
@@ -1323,7 +1325,7 @@
       { term: "token_endpoint", category: "Endpoints", def: "The back-channel URL where the app POSTs to exchange an authorization code (+ PKCE verifier) for tokens, or to use a refresh_token for renewal. Never visible in the browser address bar.", example: "\"token_endpoint\": \"https://api.mock.health/smart/token\"" },
       // ── SMART Capabilities ─────────────────────────────────────────────────
       { term: "authorize-post", category: "SMART Capabilities", def: "Capability flag indicating the authorization server accepts authorization parameters as an HTTP POST body instead of query string GET params, avoiding URL length limits.", example: "\"capabilities\": [ ..., \"authorize-post\", ... ]" },
-      { term: "client-confidential-asymmetric", category: "SMART Capabilities", def: "Capability indicating the server supports backend confidential clients authenticating at the token_endpoint using a signed private_key_jwt (asymmetric cryptography — no shared secret required).", example: "\"capabilities\": [ ..., \"client-confidential-asymmetric\", ... ]" },
+      { term: "client-confidential-asymmetric", category: "SMART Capabilities", def: "Capability indicating the server supports confidential clients (user-facing apps with a server, and backend services) authenticating at the token_endpoint using a signed private_key_jwt (asymmetric cryptography — no shared secret required).", example: "\"capabilities\": [ ..., \"client-confidential-asymmetric\", ... ]" },
       { term: "client-confidential-symmetric", category: "SMART Capabilities", def: "Capability indicating the server supports confidential user-facing apps that authenticate at the token_endpoint with a shared client_secret (client_secret_basic or client_secret_post). Backend services must use asymmetric keys instead.", example: "\"capabilities\": [ ..., \"client-confidential-symmetric\", ... ]" },
       { term: "client-public", category: "SMART Capabilities", def: "Capability indicating the server supports public clients (e.g. browser or mobile apps that cannot securely store a client_secret), authenticating via PKCE only (token_endpoint_auth_method=none).", example: "\"capabilities\": [ ..., \"client-public\", ... ]" },
       { term: "context-banner", category: "SMART Capabilities", def: "Capability indicating the server can return 'need_patient_banner' in the token response, telling an embedded app whether to show its own patient header. The styling URL (smart_style_url) is a separate capability, context-style.", example: "\"capabilities\": [ ..., \"context-banner\", ... ]" },
@@ -1342,7 +1344,7 @@
       { term: "/.well-known/smart-configuration", category: "Discovery", def: "The standard URL path appended to the FHIR base URL that returns the SMART Discovery document — a JSON object listing all OAuth endpoints, capabilities, and supported scopes for that server.", example: "GET https://api.mock.health/fhir/.well-known/smart-configuration" },
       { term: "CapabilityStatement", category: "Discovery", def: "A clinical metadata document at /metadata describing the FHIR server's supported resources, profiles, and search parameters. Separate from SMART Discovery — covers WHAT clinical data is available, not HOW to authorize.", example: "GET https://api.mock.health/fhir/metadata" },
       { term: "launch context", category: "Discovery", def: "Session-specific values returned in the token response after authorization. Includes 'patient' (FHIR Patient ID), optionally 'encounter', 'need_patient_banner', and 'smart_style_url'.", example: "{\n  \"access_token\": \"eyJhbGciOi...\",\n  \"patient\": \"pat-mother-eleanor-456\",\n  \"encounter\": \"enc-ed-triage-8821\"\n}" },
-      { term: "need_patient_banner", category: "Discovery", def: "Token response boolean. true = standalone app must render its own patient header (name, DOB, MRN). false = EHR already shows the patient banner in its frame; app should not duplicate it.", example: "\"need_patient_banner\": false" },
+      { term: "need_patient_banner", category: "Discovery", def: "Token response boolean, sent only in an EHR launch. true = the app must show its own patient banner (name, DOB, MRN). false = the EHR already shows one, so the app need not use space for it. In a standalone launch it is absent and the app shows its own banner.", example: "\"need_patient_banner\": false" },
       { term: "smart_style_url", category: "Discovery", def: "Token response URL pointing to a JSON object with EHR-specific CSS color variables. Allows an embedded SMART app to visually match the surrounding EHR's theme (fonts, colors, button styles).", example: "\"smart_style_url\": \"https://api.mock.health/style/ehr-theme.json\"" },
       // ── FHIR Resources ─────────────────────────────────────────────────────
       { term: "Bundle", category: "FHIR Resources", def: "A FHIR container resource grouping multiple resources together. FHIR search results are returned as a Bundle of type 'searchset' with an array of 'entry' objects.", example: "{\n  \"resourceType\": \"Bundle\",\n  \"type\": \"searchset\",\n  \"total\": 2,\n  \"entry\": [ ... ]\n}" },
@@ -1350,7 +1352,7 @@
       { term: "Observation", category: "FHIR Resources", def: "A FHIR resource for a clinical measurement or finding. Lab results (HbA1c, CBC), vital signs (blood pressure, weight), and social history are all represented as Observation resources.", example: "{\n  \"resourceType\": \"Observation\",\n  \"status\": \"final\",\n  \"code\": { \"coding\": [{ \"system\": \"http://loinc.org\", \"code\": \"4548-4\" }] },\n  \"valueQuantity\": { \"value\": 6.8, \"unit\": \"%\" }\n}" },
       { term: "Patient", category: "FHIR Resources", def: "A FHIR resource representing a person receiving healthcare. The Patient.id is returned as the 'patient' context value in the token response after SMART authorization.", example: "{ \"resourceType\": \"Patient\", \"id\": \"pat-mother-eleanor-456\" }" },
       { term: "Practitioner", category: "FHIR Resources", def: "A FHIR resource representing a clinical professional (doctor, nurse, pharmacist). When a clinician launches an app via EHR Launch, the id_token's fhirUser claim often references a Practitioner resource.", example: "\"fhirUser\": \"Practitioner/dr-smith-101\"" },
-      { term: "RelatedPerson", category: "FHIR Resources", def: "A FHIR resource representing a person related to a patient (caregiver, family member). When a caregiver accesses their family member's records, the id_token's fhirUser claim references a RelatedPerson.", example: "\"fhirUser\": \"RelatedPerson/john-42\"" },
+      { term: "RelatedPerson", category: "FHIR Resources", def: "A FHIR resource representing a person related to a patient (caregiver, family member). When a caregiver accesses their family member's records, the id_token's fhirUser claim references a RelatedPerson.", example: "\"fhirUser\": \"https://api.mock.health/fhir/RelatedPerson/john-caregiver-42\"" },
       // ── Launch Workflows ───────────────────────────────────────────────────
       { term: "authorization_code flow", category: "Launch Workflows", def: "The main OAuth 2.0 flow for user-facing SMART apps. App redirects browser to authorization_endpoint → user logs in → server redirects back with a one-time 'code' → app exchanges code at token_endpoint for tokens.", example: "https://app.example.org/callback?code=authz_code_9f8a7b6c5d4e&state=csrf_98a7b6c5" },
       { term: "EHR Launch", category: "Launch Workflows", def: "Launch workflow initiated from inside the EHR. The EHR opens the app's launch URL with ?iss= (FHIR base) and ?launch= (opaque context token). Patient/encounter context is established without additional user selection.", example: "https://app.example.org/launch?iss=https%3A%2F%2Fapi.mock.health%2Ffhir&launch=xyz987" },
@@ -1475,7 +1477,7 @@
           "Patient context was rejected by the server"
         ],
         answer: 1,
-        explanation: "When launched inside an EHR, the EHR chrome already displays a patient header; 'need_patient_banner: false' tells the app not to render a duplicate banner."
+        explanation: "When launched inside an EHR, the EHR chrome already displays a patient header; 'need_patient_banner: false' tells the app it does not need to render its own banner."
       },
       {
         id: 7,
@@ -1712,10 +1714,11 @@
             resourceType: "Observation",
             id: "obs-hba1c-pat-456",
             status: "final",
-            code: { text: "Hemoglobin A1c" },
+            category: [{ coding: [{ system: "http://terminology.hl7.org/CodeSystem/observation-category", code: "laboratory", display: "Laboratory" }] }],
+            code: { coding: [{ system: "http://loinc.org", code: "4548-4", display: "Hemoglobin A1c/Hemoglobin.total in Blood" }], text: "Hemoglobin A1c" },
             subject: { reference: "Patient/pat-mother-eleanor-456", display: "Eleanor Miller" },
             effectiveDateTime: "2025-01-15T08:30:00Z",
-            valueQuantity: { value: 6.8, unit: "%" }
+            valueQuantity: { value: 6.8, unit: "%", system: "http://unitsofmeasure.org", code: "%" }
           }
         },
         {
@@ -1724,10 +1727,11 @@
             resourceType: "Observation",
             id: "obs-hba1c-pat-789",
             status: "final",
-            code: { text: "Hemoglobin A1c" },
+            category: [{ coding: [{ system: "http://terminology.hl7.org/CodeSystem/observation-category", code: "laboratory", display: "Laboratory" }] }],
+            code: { coding: [{ system: "http://loinc.org", code: "4548-4", display: "Hemoglobin A1c/Hemoglobin.total in Blood" }], text: "Hemoglobin A1c" },
             subject: { reference: "Patient/pat-marcus-789", display: "Marcus Vance" },
             effectiveDateTime: "2025-01-18T10:15:00Z",
-            valueQuantity: { value: 8.2, unit: "%" }
+            valueQuantity: { value: 8.2, unit: "%", system: "http://unitsofmeasure.org", code: "%" }
           }
         },
         {
@@ -1736,10 +1740,11 @@
             resourceType: "Observation",
             id: "obs-hba1c-pat-102",
             status: "final",
-            code: { text: "Hemoglobin A1c" },
+            category: [{ coding: [{ system: "http://terminology.hl7.org/CodeSystem/observation-category", code: "laboratory", display: "Laboratory" }] }],
+            code: { coding: [{ system: "http://loinc.org", code: "4548-4", display: "Hemoglobin A1c/Hemoglobin.total in Blood" }], text: "Hemoglobin A1c" },
             subject: { reference: "Patient/pat-sophia-102", display: "Sophia Chen" },
             effectiveDateTime: "2025-01-20T14:00:00Z",
-            valueQuantity: { value: 5.6, unit: "%" }
+            valueQuantity: { value: 5.6, unit: "%", system: "http://unitsofmeasure.org", code: "%" }
           }
         }
       ]
@@ -2536,7 +2541,7 @@
                   <h3 className="text-lg font-semibold text-white">How to read this lab</h3>
                   <div className="code-island rounded-xl border p-4 overflow-x-auto">
                     <span className="code-label">HTTP request</span>
-                    <pre className="code-island text-sm text-slate-300 leading-relaxed"><span className="text-emerald-300">GET</span> /.well-known/smart-configuration{"\n"}<span className="text-slate-400">Host:</span> api.mock.health</pre>
+                    <pre className="code-island text-sm text-slate-300 leading-relaxed"><span className="text-emerald-300">GET</span> /fhir/.well-known/smart-configuration{"\n"}<span className="text-slate-400">Host:</span> api.mock.health</pre>
                   </div>
                   <ul className="space-y-3 text-slate-300 leading-relaxed">
                     <li><span className="font-semibold text-white">Dark boxes are code.</span> Real requests, responses and JSON, exactly as the computer sends and reads them.</li>
@@ -2549,7 +2554,7 @@
               <section aria-labelledby="cast-heading" className="border-t border-slate-700 pt-6 space-y-4">
                 <h2 id="cast-heading" className="text-xl font-semibold text-white">Who is involved</h2>
                 <dl className="grid gap-x-8 gap-y-4 sm:grid-cols-2 lg:grid-cols-3 text-slate-300">
-                  <div><dt className="font-semibold text-white">John, the user</dt><dd className="leading-relaxed">Signs in and approves what the app may see. In a hospital (an EHR launch) this is a clinician instead.</dd></div>
+                  <div><dt className="font-semibold text-white">John, the user</dt><dd className="leading-relaxed">Signs in and approves what the app may see. In an EHR launch the user is whoever started the app inside the health system's software: often a clinician, sometimes a patient in a portal like MyChart.</dd></div>
                   <div><dt className="font-semibold text-white">The app</dt><dd className="leading-relaxed">John&rsquo;s graphing app. In OAuth terms it is the client: the program asking for data.</dd></div>
                   <div><dt className="font-semibold text-white">The browser</dt><dd className="leading-relaxed">Carries John to the sign-in page and back to the app with a one-time code.</dd></div>
                   <div><dt className="font-semibold text-white">The authorization server</dt><dd className="leading-relaxed">Checks who John is, asks for his approval, and hands out <Term t="access_token">access tokens</Term>.</dd></div>
@@ -2931,10 +2936,10 @@
                               Epic & Oracle Health Architecture Flowcharts
                             </span>
                             <h3 className="text-lg font-bold text-white mt-1">
-                              Compare the 3 SMART Workflows & Where Each Begins
+                              Compare 2 Launches and 1 Backend Workflow
                             </h3>
                             <p className="text-sm text-slate-300 mt-1">
-                              Real-world technical flowcharts from <strong>Epic</strong> and <strong>Oracle Health</strong> use three core launch patterns. Click each workflow below to compare where the connection starts, which grant type it uses, and how it maps to your discovery JSON:
+                              Real-world technical flowcharts from <strong>Epic</strong> and <strong>Oracle Health</strong> show two launch patterns plus backend services, where no user is involved. Click each workflow below to compare where the connection starts, which grant type it uses, and how it maps to your discovery JSON:
                             </p>
                           </div>
 
@@ -2942,7 +2947,7 @@
                             {[
                               { id: "standalone", label: "1. Standalone Launch", cap: "launch-standalone" },
                               { id: "ehr", label: "2. EHR Launch", cap: "launch-ehr" },
-                              { id: "backend", label: "3. Backend Service", cap: "client_credentials" }
+                              { id: "backend", label: "3. Backend Service (no launch)", cap: "client-confidential-asymmetric" }
                             ].map((wf) => (
                               <button
                                 key={wf.id}
@@ -3345,7 +3350,7 @@
                           {activeGrantTab === "authorization_code" &&
                             "Used in Standalone & EHR Launches when a human user signs in via the browser and the app exchanges the resulting authorization code for an access token."}
                           {activeGrantTab === "refresh_token" &&
-                            "Allows an app (when granted offline_access) to use an issued refresh token to obtain a fresh access token when the current one expires."}
+                            "Allows an app (when granted offline_access, or online_access in an EHR launch) to use an issued refresh token to obtain a fresh access token when the current one expires."}
                           {activeGrantTab === "client_credentials" &&
                             "Featured in Epic & Oracle Health backend flowcharts! Allows an approved backend service to request a token directly (server-to-server) without a human user signing in during that exchange."}
                         </div>
@@ -3639,7 +3644,7 @@
                           Pause & Think (Caregiver Proxy Scenario):
                         </div>
                         <p className="text-slate-300">
-                          John signs in using his own caregiver account to help his mother (Martha) manage her care. His provider has already authorized him to access her records.
+                          John signs in using his own caregiver account to help his mother (Eleanor) manage her care. His provider has already authorized him to access her records.
                         </p>
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                           <div className="p-3 rounded-lg bg-slate-900 border border-slate-800 space-y-2">
@@ -3765,6 +3770,12 @@
                           <div className="flex flex-wrap gap-1">
                             {appRequestedScopes
                               .filter((s) => s !== "patient/Observation.cruds")
+                              .concat(
+                                appRequestedScopes.includes("patient/Observation.cruds") &&
+                                  !appRequestedScopes.includes("patient/Observation.rs")
+                                  ? ["patient/Observation.rs"]
+                                  : []
+                              )
                               .map((sc) => (
                                 <span
                                   key={sc}
@@ -4271,7 +4282,7 @@
                         <ul className="space-y-1 text-xs text-slate-300">
                           <li>• <strong>Step 0 Entry:</strong> User opens App directly on phone/browser.</li>
                           <li>• <strong>Step 2 <code className="code-inline">/authorize</code>:</strong> Sends <code className="code-inline text-amber-300">scope=launch/patient ...</code> (no <code className="code-inline text-slate-400">launch=</code> param). Portal asks user to pick patient.</li>
-                          <li>• <strong>Step 11 <code className="code-inline">/token</code> Context:</strong> Returns <code className="code-inline text-emerald-300">"patient": "pat-mother-eleanor-456"</code> and <code className="code-inline text-sky-300">"need_patient_banner": true</code>.</li>
+                          <li>• <strong>Step 11 <code className="code-inline">/token</code> Context:</strong> Returns <code className="code-inline text-emerald-300">"patient": "pat-mother-eleanor-456"</code>. No <code className="code-inline text-sky-300">need_patient_banner</code>: it is only sent in EHR launches, so the app shows its own banner.</li>
                           <li>• <strong><code className="code-inline">id_token</code> User:</strong> John Miller (<code className="code-inline text-indigo-300">RelatedPerson/john-caregiver-42</code>).</li>
                         </ul>
                       </div>
@@ -4428,7 +4439,7 @@
                   </li>
                   <li>Highlighted columns: the parties in this step.</li>
                   <li>
-                    Steps 0&ndash;15 follow Epic&rsquo;s standalone diagram; 16&ndash;18 (refresh) are added here. Epic&rsquo;s EHR diagram stops at 11: the clinician is already signed in.{" "}
+                    Steps 0&ndash;15 follow Epic&rsquo;s standalone diagram; 16&ndash;18 (refresh) are added here. EHR mode keeps the same numbers. Epic&rsquo;s own EHR diagram (0&ndash;11) folds the sign-in check, steps 3&ndash;6, into one arrow.{" "}
                     <a href="https://fhir.epic.com/Documentation?docId=oauth2tutorial&amp;section=testing-a-standalone-launch" className="text-sky-300 underline underline-offset-2 hover:text-sky-200" target="_blank" rel="noopener noreferrer">Epic&rsquo;s diagrams</a>
                   </li>
                 </ul>
@@ -4886,7 +4897,7 @@
                             <p className="text-sm text-slate-400">
                               {launchMode === "ehr"
                                 ? <>Includes <code className="code-inline">encounter: enc-ed-triage-8821</code> & <code className="code-inline">need_patient_banner: false</code>.</>
-                                : <>Includes <code className="code-inline">need_patient_banner: true</code> & <code className="code-inline">refresh_token</code> (for renewal).</>}
+                                : <>Includes a <code className="code-inline">refresh_token</code> (for renewal). No <code className="code-inline">need_patient_banner</code>: that is EHR-only.</>}
                             </p>
                           </div>
                         </div>
@@ -4926,18 +4937,18 @@
                                   : "bg-sky-950/40 text-sky-300 border-sky-500/30"
                               }`}
                             >
-                              SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c
+                              Qm3x8vZpL2tWc9eHkR4nYb0sJ7uAf1Dg...
                             </button>
                           </div>
                           <div className="code-island p-2.5 rounded-lg bg-slate-900 border border-slate-800 font-mono text-xs text-slate-300">
                             {selectedJwtPart === "header" &&
-                              'Header: { "alg": "RS256", "kid": "smart-key-1", "typ": "JWT" } — Tells the verifier which key in jwks_uri signed this token.'}
+                              'Header: { "alg": "RS256", "kid": "smart-key-1" } — Tells the verifier which key in jwks_uri signed this token.'}
                             {selectedJwtPart === "payload" &&
                               (launchMode === "ehr"
-                                ? 'Payload (EHR Launch id_token): { "iss": "https://api.mock.health", "sub": "practitioner-dr-smith-101", "aud": "john-graph-app", "exp": 1740003600, "iat": 1740000000, "fhirUser": "Practitioner/dr-smith-101" }'
-                                : 'Payload (Standalone id_token): { "iss": "https://api.mock.health", "sub": "user-john-caregiver-42", "aud": "john-graph-app", "exp": 1740003600, "iat": 1740000000, "fhirUser": "RelatedPerson/john-42" }')}
+                                ? 'Payload (EHR Launch id_token): { "iss": "https://api.mock.health", "sub": "practitioner-dr-smith-101", "aud": "john-graph-app", "exp": 1740003600, "iat": 1740000000, "fhirUser": "https://api.mock.health/fhir/Practitioner/dr-smith-101" }'
+                                : 'Payload (Standalone id_token): { "iss": "https://api.mock.health", "sub": "user-john-caregiver-42", "aud": "john-graph-app", "exp": 1740003600, "iat": 1740000000, "fhirUser": "https://api.mock.health/fhir/RelatedPerson/john-caregiver-42" }')}
                             {selectedJwtPart === "signature" &&
-                              "Signature: RSASHA256(base64Url(Header) + '.' + base64Url(Payload), PrivateKey) — Verified using public keys from https://api.mock.health/smart/jwks."}
+                              "Signature: RSASHA256(base64Url(Header) + '.' + base64Url(Payload), PrivateKey) — Verified using public keys from https://api.mock.health/smart/jwks. With a 2048-bit key it is 256 bytes, about 342 characters, so it is shortened here."}
                           </div>
                         </div>
                       </div>
@@ -5043,7 +5054,7 @@
                                   Your Session Has Expired
                                 </div>
                                 <p className="text-slate-400 text-sm max-w-sm mx-auto">
-                                  The application was kicked out. The patient or clinician must re-enter their username and password from scratch!
+                                  The application was kicked out. In a standalone launch, John must sign in again from scratch. In an EHR launch, the clinician relaunches the app from the chart.
                                 </p>
                               </div>
                             </div>
@@ -5425,7 +5436,7 @@
                                         need_patient_banner: false,
                                         smart_style_url: "https://api.mock.health/smart/style.json",
                                         id_token: "eyJraWQiOiJzbWFydC1rZXktMSIs... (fhirUser: Practitioner/dr-smith-101)",
-                                        ...(simScopes.includes("offline_access")
+                                        ...(simScopes.includes("offline_access") || simScopes.includes("online_access")
                                           ? { refresh_token: `rt_live_88a9c0_gen${tokenGeneration}` }
                                           : {})
                                       }
@@ -5438,8 +5449,7 @@
                                         expires_in: 3600,
                                         scope: grantedScopesList.join(" "),
                                         patient: "pat-mother-eleanor-456",
-                                        need_patient_banner: true,
-                                        id_token: "eyJraWQiOiJzbWFydC1rZXktMSIs... (fhirUser: RelatedPerson/john-42)",
+                                        id_token: "eyJraWQiOiJzbWFydC1rZXktMSIs... (fhirUser: RelatedPerson/john-caregiver-42)",
                                         ...(simScopes.includes("offline_access")
                                           ? { refresh_token: `rt_live_88a9c0_gen${tokenGeneration}` }
                                           : {})
@@ -5506,6 +5516,9 @@
                               <div className="text-rose-400 font-bold">
                                 HTTP/1.1 401 Unauthorized (Mistake: ID token sent to the API)
                               </div>
+                              <div className="text-amber-300">
+                                WWW-Authenticate: Bearer error="invalid_token", error_description="Not an access token for this server"
+                              </div>
                               <pre className="code-island text-rose-300 whitespace-pre-wrap">
                                 {JSON.stringify(
                                   {
@@ -5532,6 +5545,7 @@
                               <div className="text-rose-400 font-bold">
                                 HTTP/1.1 403 Forbidden (Insufficient Scope at Step 13)
                               </div>
+                              <div className="text-rose-300">WWW-Authenticate: Bearer error="insufficient_scope", scope="patient/Observation.cruds"</div>
                               <pre className="code-island text-rose-300 whitespace-pre-wrap">
                                 {JSON.stringify(
                                   {
@@ -5920,9 +5934,9 @@
                       </tr>
                       <tr>
                         <td className="p-3 font-semibold text-white">Standard & Scope</td>
-                        <td className="p-3 font-mono text-xs">OpenID Connect (<code className="code-inline">openid</code>, <code className="code-inline">fhirUser</code>)</td>
+                        <td className="p-3 font-mono text-xs">OpenID Connect (<code className="code-inline">openid</code>) + SMART (<code className="code-inline">fhirUser</code>)</td>
                         <td className="p-3 font-mono text-xs">OAuth 2.0 (<code className="code-inline">patient/*.rs</code>, <code className="code-inline">user/*.rs</code>)</td>
-                        <td className="p-3 font-mono text-xs">OAuth 2.0 (<code className="code-inline">offline_access</code>)</td>
+                        <td className="p-3 font-mono text-xs">OpenID Connect (<code className="code-inline">offline_access</code>) or SMART (<code className="code-inline">online_access</code>)</td>
                       </tr>
                       <tr>
                         <td className="p-3 font-semibold text-white">Format</td>
@@ -5986,7 +6000,7 @@
                     <div className="code-island p-3 rounded-lg bg-slate-900 border border-slate-800 font-mono text-sm leading-relaxed space-y-1">
                       <div>{"{"}</div>
                       <div className="pl-4 text-slate-400">"iss": "https://api.mock.health",</div>
-                      <div className="pl-4 text-slate-400">"sub": "{fhirUserLaunchMode === "ehr" ? "dr-smith-101" : "john-caregiver-42"}",</div>
+                      <div className="pl-4 text-slate-400">"sub": "{fhirUserLaunchMode === "ehr" ? "practitioner-dr-smith-101" : "user-john-caregiver-42"}",</div>
                       <div className="pl-4 text-slate-400">"aud": "john-graph-app",</div>
                       <div className="pl-4 bg-indigo-500/20 text-indigo-200 font-bold px-2 py-0.5 rounded border border-indigo-500/40">
                         "fhirUser": "https://api.mock.health/fhir/{fhirUserLaunchMode === "ehr" ? "Practitioner/dr-smith-101" : "RelatedPerson/john-caregiver-42"}",
@@ -6005,7 +6019,7 @@ const { payload } = await jwtVerify(tokenResponse.id_token, jwks, { issuer, audi
 
 // 2. Extract the relative or absolute FHIR resource URL
 const userResourceUrl = payload.fhirUser;
-// -> "${fhirUserLaunchMode === "ehr" ? "Practitioner/dr-smith-101" : "RelatedPerson/john-caregiver-42"}"`}
+// -> "https://api.mock.health/fhir/${fhirUserLaunchMode === "ehr" ? "Practitioner/dr-smith-101" : "RelatedPerson/john-caregiver-42"}"`}
                     </pre>
                   </div>
 
@@ -6100,7 +6114,7 @@ const userResourceUrl = payload.fhirUser;
                       {/* Fake EHR Patient Demographic Header (The Patient Banner) */}
                       <div className="bg-slate-800/90 border-b border-slate-700/80 p-2.5 flex flex-wrap items-center justify-between gap-2 text-xs">
                         <div className="font-bold text-emerald-300">
-                          MILLER, ELEANOR • 72 yo F
+                          MILLER, ELEANOR • 74 yo F
                         </div>
                         <div className="text-slate-300 font-mono text-xs">
                           DOB: 03/14/1952 | MRN: 456 | Allergies: Penicillin
@@ -6130,12 +6144,12 @@ const userResourceUrl = payload.fhirUser;
                     </div>
                   </div>
 
-                  {/* Right Box: Standalone App (need_patient_banner: true) */}
+                  {/* Right Box: Standalone App (no need_patient_banner) */}
                   <div className="p-4 rounded-xl bg-slate-950 border border-sky-500/40 space-y-3">
                     <div className="flex items-center justify-between">
                       <div className="font-bold text-sky-300 flex items-center gap-2">
                         <Smartphone className="w-4 h-4" />
-                        <span>Standalone App (<code className="code-inline">need_patient_banner: true</code>)</span>
+                        <span>Standalone App (no <code className="code-inline">need_patient_banner</code>)</span>
                       </div>
                       <span className="px-2 py-0.5 rounded text-xs font-bold bg-sky-500/20 text-sky-300">
                         APP RENDERS BANNER
@@ -6173,7 +6187,7 @@ const userResourceUrl = payload.fhirUser;
                           [ Interactive HbA1c Canvas Graph ]
                         </div>
                         <div className="p-1.5 rounded bg-sky-950/30 text-sky-300 text-xs text-center">
-                          ✓ App rendered its own patient header because <code className="code-inline">need_patient_banner</code> is true!
+                          ✓ App rendered its own patient header. In a standalone launch no EHR is showing one, so the app always does.
                         </div>
                       </div>
                     </div>
@@ -6275,7 +6289,7 @@ const userResourceUrl = payload.fhirUser;
                       </span>
                     </div>
                     <p className="text-sm text-slate-400">
-                      EHR and standalone launches, SMART v1 and v2 scopes (v2 since Epic&rsquo;s November 2024 version), private_key_jwt keys, and OpenID Connect.
+                      EHR and standalone launches, SMART v1 and v2 scopes, private_key_jwt keys, and OpenID Connect.
                     </p>
                     <div className="flex flex-wrap gap-1.5 pt-1">
                       {VENDOR_CAPABILITIES.epic.map((cap) => {
@@ -6352,7 +6366,7 @@ const userResourceUrl = payload.fhirUser;
                       </span>
                     </div>
                     <p className="text-sm text-slate-400">
-                      Our live simulated environment implements the complete SMART v2 specification with all capabilities enabled.
+                      The public mock server this lab is built on. It advertises most SMART v2 capabilities, but not <code className="code-inline">context-standalone-encounter</code>, <code className="code-inline">permission-online</code> or <code className="code-inline">smart-app-state</code>.
                     </p>
                     <div className="flex flex-wrap gap-1.5 pt-1">
                       {VENDOR_CAPABILITIES.mock.map((cap) => {
@@ -6398,9 +6412,9 @@ const userResourceUrl = payload.fhirUser;
                       {CAPABILITY_DEFINITIONS[capabilityExpanded].desc}
                     </p>
                     <div className="flex items-center gap-4 text-xs pt-1 text-slate-400 font-mono">
-                      <span>Epic: {CAPABILITY_DEFINITIONS[capabilityExpanded].epic ? "✅ Supported" : "❌ Not Supported"}</span>
-                      <span>Oracle: {CAPABILITY_DEFINITIONS[capabilityExpanded].oracle ? "✅ Supported" : "❌ Not Supported"}</span>
-                      <span>Mock Lab: {VENDOR_CAPABILITIES.mock.includes(capabilityExpanded) ? "✅ Supported" : "❌ Not Supported"}</span>
+                      <span>Epic: {CAPABILITY_DEFINITIONS[capabilityExpanded].epic ? "✅ Advertised" : "❌ Not advertised"}</span>
+                      <span>Oracle: {CAPABILITY_DEFINITIONS[capabilityExpanded].oracle ? "✅ Advertised" : "❌ Not advertised"}</span>
+                      <span>Mock Lab: {VENDOR_CAPABILITIES.mock.includes(capabilityExpanded) ? "✅ Advertised" : "❌ Not advertised"}</span>
                     </div>
                   </div>
                 )}
@@ -7047,8 +7061,11 @@ Content-Type: application/json
                         <div className="space-y-1">
                           <div className="font-bold text-slate-400">Server Error Response ({activeErr.status}):</div>
                           <pre className="code-island p-2.5 rounded bg-slate-900 text-amber-300 font-mono text-xs whitespace-pre-wrap">
-                            {JSON.stringify(activeErr.response, null, 2)}
+                            {(activeErr.header ? activeErr.header + "\n\n" : "") + JSON.stringify(activeErr.response, null, 2)}
                           </pre>
+                          {activeErr.header && (
+                            <p className="text-xs text-slate-400">The standard error is the <code className="code-inline">WWW-Authenticate</code> header (RFC 6750). The body below it is optional and varies by server.</p>
+                          )}
                         </div>
                       </div>
 
