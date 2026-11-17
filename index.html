@@ -663,7 +663,7 @@
           viaProxy: true,
           label: "1. Download SMART Discovery (/.well-known/smart-configuration)",
           detail:
-            "The FHIR App sends an HTTP GET request through the Reverse Proxy (•) to read `authorization_endpoint`, `token_endpoint`, `capabilities`, and `code_challenge_methods_supported` (S256). Epic's diagram calls this downloading the FHIR conformance statement. Servers once also listed these addresses in the CapabilityStatement at `/metadata` (now deprecated). The discovery file has been the standard place since SMART 1.0."
+            "The FHIR App sends an HTTP GET request through the Reverse Proxy (•) to read `authorization_endpoint`, `token_endpoint`, `capabilities`, and `code_challenge_methods_supported` (S256). Epic's diagram calls this downloading the FHIR conformance statement, the old name for the resource now called CapabilityStatement. Servers once also listed these addresses in the CapabilityStatement at `/metadata` (now deprecated). The discovery file has been the standard place since SMART 1.0."
         },
         {
           num: 2,
@@ -1283,7 +1283,7 @@
       { term: "PKCE", category: "Acronyms", def: "Proof Key for Code Exchange (RFC 7636). A security extension to OAuth 2.0 that prevents authorization code interception attacks by requiring a code_verifier secret paired with a code_challenge hash.", example: "code_verifier  = dBjftJeZ4CVP-mB92K27uhbUJU1p1r_wW1gFWFOEjXk\ncode_challenge = E9Melhoa2OwvFrEMTJguCHaoeK1t8URWbuGJSstw-cM" },
       { term: "REST", category: "Acronyms", def: "Representational State Transfer. An architectural style for web APIs. FHIR uses RESTful conventions: resources have URLs, HTTP verbs describe actions, and responses are JSON or XML.", example: "GET    /fhir/Observation?patient=pat-mother-eleanor-456   (read)\nPOST   /fhir/Observation                                 (create)\nPUT    /fhir/Observation/obs-1                           (update)\nDELETE /fhir/Observation/obs-1                           (delete)" },
       { term: "RFC", category: "Acronyms", def: "Request for Comments. Documents published by the IETF (Internet Engineering Task Force) defining internet standards. OAuth 2.0 = RFC 6749, PKCE = RFC 7636, JWT = RFC 7519, Bearer tokens = RFC 6750.", example: "RFC 6749  OAuth 2.0\nRFC 7636  PKCE\nRFC 7519  JSON Web Token (JWT)" },
-      { term: "SMART", category: "Acronyms", def: "Substitutable Medical Apps, Reusable Technologies. A set of open standards (built on OAuth 2.0 + FHIR) enabling apps to securely connect to any SMART-compatible EHR with a consistent authorization pattern.", example: "GET https://api.mock.health/fhir/.well-known/smart-configuration\nscope=launch/patient openid fhirUser patient/Observation.rs" },
+      { term: "SMART", category: "Acronyms", def: "Substitutable Medical Applications, Reusable Technologies. A set of open standards (built on OAuth 2.0 + FHIR) enabling apps to securely connect to any SMART-compatible EHR with a consistent authorization pattern.", example: "GET https://api.mock.health/fhir/.well-known/smart-configuration\nscope=launch/patient openid fhirUser patient/Observation.rs" },
       { term: "SSO", category: "Acronyms", def: "Single Sign-On. During an EHR launch the clinician is already signed in to the EHR, so many EHRs establish the SMART session without a second login. That is EHR behavior; it is not what the sso-openid-connect capability promises." },
       { term: "TLS", category: "Acronyms", def: "Transport Layer Security. The encryption protocol (formerly SSL) that secures HTTP traffic as HTTPS. All OAuth flows, token endpoints, and FHIR API calls must use HTTPS/TLS to protect tokens in transit.", example: "https://api.mock.health   (the s in https means TLS)" },
       { term: "TTL", category: "Acronyms", def: "Time To Live. The duration (in seconds) an access_token remains valid, specified in the token response as 'expires_in'. Typically 3600 seconds (1 hour) for SMART tokens.", example: "\"expires_in\": 3600   (the access token works for one hour)" },
@@ -2984,11 +2984,15 @@
                               <p className="text-slate-300">
                                 <strong>Where it begins:</strong> Outside the EHR—for example, John opens a patient app on his phone or browser and chooses his healthcare provider.
                               </p>
-                              <div className="code-island p-2.5 rounded-lg bg-slate-900 border border-slate-800 font-mono text-xs text-slate-300">
-                                Steps 0–1 (Phase 1): Launch App & GET /.well-known/smart-configuration{"\n"}
-                                Steps 2–8 (Phase 2): GET /smart/authorize → Portal Login → Issue & Return auth code{"\n"}
-                                Steps 9–11 (Phase 3): POST /smart/token (PKCE Check) → Return access_token{"\n"}
-                                Steps 12–18 (Phase 4): GET /fhir/Observation → Verify token → Refresh renewal
+                              <div className="code-island p-2.5 rounded-lg bg-slate-900 border border-slate-800 font-mono text-xs text-slate-300 whitespace-pre-line leading-relaxed">
+                                Epic standalone launch diagram:{"\n"}
+                                Step 0: John opens the app{"\n"}
+                                Step 1: GET /.well-known/smart-configuration (Epic says &quot;conformance statement&quot;){"\n"}
+                                Step 2: Authorization request (GET /smart/authorize){"\n"}
+                                Steps 3–6: John signs in through the browser and approves{"\n"}
+                                Steps 7–11: Auth code returns and is traded at /smart/token (PKCE check){"\n"}
+                                Steps 12–15: GET /fhir/Observation → verify token → return → display{"\n"}
+                                Steps 16–18: Refresh renewal (added by this lab)
                               </div>
                             </div>
                           )}
@@ -3002,11 +3006,16 @@
                               <p className="text-slate-300">
                                 <strong>Where it begins:</strong> Inside the EHR (e.g., a clinician in Epic or Oracle Health clicks a button to launch a growth chart or decision-support app while already viewing a patient's chart).
                               </p>
-                              <div className="code-island p-2.5 rounded-lg bg-slate-900 border border-slate-800 font-mono text-xs text-slate-300">
-                                1. EHR opens App Launch URL with ?iss=...&launch=xyz123 (opaque launch context token){"\n"}
-                                2. App GETs /.well-known/smart-configuration from iss{"\n"}
-                                3. App calls authorization_endpoint passing launch=xyz123 & scope=launch{"\n"}
-                                4. App exchanges code at token_endpoint → receives access_token automatically tied to the EHR's active patient & encounter!
+                              <div className="code-island p-2.5 rounded-lg bg-slate-900 border border-slate-800 font-mono text-xs text-slate-300 whitespace-pre-line leading-relaxed">
+                                Oracle Health, Figure 2 (EHR Launch Flow):{"\n"}
+                                1: Clinician opens the app from inside the EHR{"\n"}
+                                2: EHR sends the app its launch URL with ?iss=...&launch=xyz123{"\n"}
+                                3–4: App reads the server&apos;s discovery information{"\n"}
+                                5: Browser goes to authorization_endpoint with scope=launch ... & launch=xyz123{"\n"}
+                                6–7: Authorization server checks the user (often no new password){"\n"}
+                                8: Auth code returns to the app{"\n"}
+                                9–10: App trades the code at token_endpoint (PKCE check) → access_token + patient context{"\n"}
+                                11–12: App requests FHIR data with the token and gets it back
                               </div>
                             </div>
                           )}
@@ -3020,11 +3029,12 @@
                               <p className="text-slate-300">
                                 <strong>Where it begins:</strong> An approved automated server service (no human user signing in via a browser during the exchange).
                               </p>
-                              <div className="code-island p-2.5 rounded-lg bg-slate-900 border border-slate-800 font-mono text-xs text-slate-300">
-                                1. Service reads token_endpoint from /.well-known/smart-configuration{"\n"}
-                                2. Skips authorization_endpoint completely (no browser sign-in!){"\n"}
-                                3. POSTs directly to token_endpoint with grant_type=client_credentials & signed JWT assertion ( scope=system/*.rs ){"\n"}
-                                4. Receives access_token for automated FHIR queries.
+                              <div className="code-island p-2.5 rounded-lg bg-slate-900 border border-slate-800 font-mono text-xs text-slate-300 whitespace-pre-line leading-relaxed">
+                                Oracle Health, Figure 4 (Client Credentials Flow):{"\n"}
+                                1–2: Service finds token_endpoint through discovery (no authorization_endpoint, no browser){"\n"}
+                                3: POSTs grant_type=client_credentials with a signed JWT client assertion (scope=system/*.rs){"\n"}
+                                4: Receives an access_token{"\n"}
+                                5–6: Requests FHIR data with the token and gets it back
                               </div>
                             </div>
                           )}
