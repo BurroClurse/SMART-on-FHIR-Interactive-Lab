@@ -2,6 +2,8 @@
 
 ### [Launch the Live Interactive Lab](https://burroclurse.github.io/SMART-on-FHIR-Interactive-Lab/)
 
+Optimized for desktop. It works on mobile, but the Watch the Flow diagram is easier to follow on a bigger screen.
+
 An open-source, self-contained interactive learning workbench for mastering **SMART on FHIR Discovery (`/.well-known/smart-configuration`)**, **SMART v1/v2 Scopes**, **OAuth 2.0 with PKCE (`S256`)**, **Standalone vs. EHR Launch workflows**, and **OpenID Connect (`id_token`) vs. `access_token` vs. Patient Context**.
 
 ---
